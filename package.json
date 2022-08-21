@@ -4,8 +4,8 @@
   "description": "Telegram bot with jotform api",
   "main": "app.js",
   "scripts": {
-    "test": "mocha --timeout 5000",
-    "start": "nodemon v1/src/app.js"
+    "test": "mocha v1/test/*.js",
+    "start": "nodemon v1/app.js"
   },
   "keywords": [
     "jotform",
@@ -14,9 +14,13 @@
   "author": "Can Bulgay",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.27.2",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
     "helmet": "^5.1.1",
+    "input": "^1.0.1",
+    "mongoose": "^6.5.2",
+    "telegram": "^2.10.10",
     "winston": "^3.8.1"
   },
   "devDependencies": {
