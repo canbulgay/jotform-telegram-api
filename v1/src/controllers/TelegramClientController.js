@@ -81,8 +81,37 @@ const startTelegramClientWithPhoneCode = async (req, res, next) => {
     next(error);
   }
 };
+/**
+ * Send a custom message to user by telegram client.
+ * TODO: Form id burada alınıp bir event listener yardımıyla jotformdan veri cekmek icin kullanılabilir.
+ *
+ * @param {username , message} req
+ * @param {message , payload} res
+ * @param {*} next
+ * @return json
+ */
+const sendMessage = async (req, res, next) => {
+  const { username, message } = req.body;
+  try {
+    const user = await TelegramUser.findOne({ api_key: 14961319 });
+    const client = new TelegramClient(user);
+    await client.sendMessage(username, message);
+
+    return res.status(200).json({
+      message: "Your message was sent successfully",
+      payload: {
+        username: username,
+        message: message,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUserTelegramCredentials,
   sendCodeToPhoneNumber,
   startTelegramClientWithPhoneCode,
+  sendMessage,
 };
