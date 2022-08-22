@@ -109,9 +109,32 @@ const sendMessage = async (req, res, next) => {
   }
 };
 
+/**
+ * Terminates all user's authorized sessions except for the current one.
+ *
+ * @param {api_key} req
+ * @param {message} res
+ * @param {error} next
+ * @return json
+ */
+const terminateSessions = async (req, res, next) => {
+  try {
+    const user = await TelegramUser.findOne({ api_key: 14961319 });
+    const client = new TelegramClient(user);
+    await client.resetAuthorizations();
+
+    return res.status(200).json({
+      message: "All sessions were terminated successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUserTelegramCredentials,
   sendCodeToPhoneNumber,
   startTelegramClientWithPhoneCode,
   sendMessage,
+  terminateSessions,
 };
