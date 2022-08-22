@@ -18,6 +18,21 @@ class telegramClient {
     );
   }
 
+  async startClient(phone_code) {
+    await this.client.start({
+      apiKey: this.api_key,
+      apiHash: this.api_hash,
+      phoneNumber: telegramUser.phone_number,
+      phoneCode: phone_code,
+      onError: (err) => console.log(err),
+    });
+
+    telegramUser.session = await this.client.session.save();
+    await telegramUser.save();
+
+    this.sendMessage("me", "Connection Successful");
+  }
+
   // TODO: Kullanıcının telefon numarası ile api kullanıcısının telefon numarasının eşleşip eşleşmeyeceğini kontrol et.
   async sendCode(phone_number) {
     telegramUser.phone_number = phone_number;
