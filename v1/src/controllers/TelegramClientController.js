@@ -33,6 +33,31 @@ const getUserTelegramCredentials = async (req, res, next) => {
   }
 };
 
+/**
+ * Sent a code to user's phone.
+ *
+ * @param {phone_number} req
+ * @param {message} res
+ * @param {error} next
+ * @return json
+ */
+
+const sendCodeToPhoneNumber = async (req, res, next) => {
+  const { phone_number } = req.body;
+
+  try {
+    const user = await TelegramUser.findOne({ api_key: 14961319 });
+    const client = new TelegramClient(user);
+    await client.sendCode(phone_number);
+
+    return res.status(200).json({
+      message: "Your code was sent successfully to your phone",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 module.exports = {
   getUserTelegramCredentials,
+  sendCodeToPhoneNumber,
 };
