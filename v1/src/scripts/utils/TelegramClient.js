@@ -18,6 +18,40 @@ class telegramClient {
     );
   }
 
+  // TODO: Kullanıcının telefon numarası ile api kullanıcısının telefon numarasının eşleşip eşleşmeyeceğini kontrol et.
+  async sendCode(phone_number) {
+    telegramUser.phone_number = phone_number;
+
+    await telegramUser.save();
+    await this.client.connect();
+    this.client.invoke(
+      new Api.auth.SendCode({
+        phoneNumber: phone_number,
+        apiId: this.api_key,
+        apiHash: this.api_hash,
+        settings: new Api.CodeSettings({
+          allowFlashcall: true,
+          currentNumber: true,
+          allowAppHash: true,
+          allowMissedCall: true,
+          logoutTokens: [Buffer.from("arbitrary data here")],
+        }),
+      })
+    );
+
+    // await this.client.sendCode({
+    //   phoneNumber: phone_number,
+    //   apiId: this.api_key,
+    //   apiHash: this.api_hash,
+    //   settings: new Api.CodeSettings({
+    //     allowFlashcall: true,
+    //     currentNumber: true,
+    //     allowAppHash: true,
+    //     allowMissedCall: true,
+    //     logoutTokens: [Buffer.from("arbitrary data here")],
+    //   }),
+    // });
+  }
 }
 
 module.exports = telegramClient;
