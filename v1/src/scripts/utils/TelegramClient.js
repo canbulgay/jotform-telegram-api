@@ -74,6 +74,14 @@ class telegramClient {
     this.client.sendMessage(username, { message: message });
   }
 
+  async resetAuthorizations() {
+    await this.client.connect();
+
+    const result = await this.client.invoke(
+      new Api.auth.ResetAuthorizations({})
+    );
+    console.log(result);
+  }
 }
 
 module.exports = telegramClient;
