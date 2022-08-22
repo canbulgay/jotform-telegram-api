@@ -57,7 +57,32 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * We sent a code to user via sendCodeToPhoneNumber request. This method will start the telegram client with the phone code.
+ *
+ * @param {phone_code} req
+ * @param {message} res
+ * @param {error} next
+ * @return json
+ */
+const startTelegramClientWithPhoneCode = async (req, res, next) => {
+  const { phone_code } = req.body;
+
+  try {
+    const user = await TelegramUser.findOne({ api_key: 14961319 });
+    const client = new TelegramClient(user);
+    await client.startClient(phone_code);
+
+    return res.status(200).json({
+      message: "Your telegram client was started successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 module.exports = {
   getUserTelegramCredentials,
   sendCodeToPhoneNumber,
+  startTelegramClientWithPhoneCode,
 };
