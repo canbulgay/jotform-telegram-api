@@ -67,6 +67,13 @@ class telegramClient {
     //   }),
     // });
   }
+
+  async sendMessage(username, message) {
+    const result = await this.client.connect();
+    console.log(result);
+    this.client.sendMessage(username, { message: message });
+  }
+
 }
 
 module.exports = telegramClient;
