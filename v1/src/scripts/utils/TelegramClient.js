@@ -1,87 +1,85 @@
 const { TelegramClient, Api } = require("telegram");
-const { StringSession } = require("telegram/sessions");
+const { StoreSession } = require("telegram/sessions");
 
-let telegramUser = "";
+let API_KEY;
+let API_HASH;
+let PHONE_NUMBER;
+let PHONE_CODE_HASH;
+let client;
 
-// TODO: Bazı değişkenleri tanımlamaya gerek yok düzenlenmesi lazım.
-class telegramClient {
-  constructor(TelegramUser) {
-    telegramUser = TelegramUser;
-    this.api_key = telegramUser.api_key;
-    this.api_hash = telegramUser.api_hash;
-    this.session = new StringSession(telegramUser.session);
-    this.client = new TelegramClient(
-      this.session,
-      telegramUser.api_key,
-      telegramUser.api_hash,
+class Client {
+  //Save User's credentials.
+  async saveCredentials(api_key, api_hash) {
+    API_KEY = parseInt(api_key);
+    API_HASH = api_hash;
+
+    client = new TelegramClient(
+      new StoreSession("Sessions"),
+      API_KEY,
+      API_HASH,
       {}
     );
+    await client.connect();
+    await client.session.setDC(2, "149.154.167.91", 80);
+    return;
   }
 
-  async startClient(phone_code) {
-    await this.client.start({
-      apiKey: this.api_key,
-      apiHash: this.api_hash,
-      phoneNumber: telegramUser.phone_number,
-      phoneCode: phone_code,
-      onError: (err) => console.log(err),
-    });
-
-    telegramUser.session = await this.client.session.save();
-    await telegramUser.save();
-
-    this.sendMessage("me", "Connection Successful");
-  }
-
-  // TODO: Kullanıcının telefon numarası ile api kullanıcısının telefon numarasının eşleşip eşleşmeyeceğini kontrol et.
+  //Send code to user via phone_number.
   async sendCode(phone_number) {
-    telegramUser.phone_number = phone_number;
+    PHONE_NUMBER = phone_number;
+    await client.connect();
+    const result = await client.sendCode(
+      {
+        apiId: API_KEY,
+        apiHash: API_HASH,
+      },
+      phone_number
+    );
 
-    await telegramUser.save();
-    await this.client.connect();
-    this.client.invoke(
-      new Api.auth.SendCode({
-        phoneNumber: phone_number,
-        apiId: this.api_key,
-        apiHash: this.api_hash,
-        settings: new Api.CodeSettings({
-          allowFlashcall: true,
-          currentNumber: true,
-          allowAppHash: true,
-          allowMissedCall: true,
-          logoutTokens: [Buffer.from("arbitrary data here")],
-        }),
+    PHONE_CODE_HASH = result.phoneCodeHash;
+
+    console.log(result);
+    return;
+  }
+
+  //Sign in user via phone_code.
+  async signIn(phone_code) {
+    await client.connect();
+
+    await client.invoke(
+      new Api.auth.SignIn({
+        phoneNumber: PHONE_NUMBER,
+        phoneCodeHash: PHONE_CODE_HASH,
+        phoneCode: phone_code,
       })
     );
 
-    // await this.client.sendCode({
-    //   phoneNumber: phone_number,
-    //   apiId: this.api_key,
-    //   apiHash: this.api_hash,
-    //   settings: new Api.CodeSettings({
-    //     allowFlashcall: true,
-    //     currentNumber: true,
-    //     allowAppHash: true,
-    //     allowMissedCall: true,
-    //     logoutTokens: [Buffer.from("arbitrary data here")],
-    //   }),
-    // });
+    return;
   }
 
+  //Send message by current user.
   async sendMessage(username, message) {
-    const result = await this.client.connect();
-    console.log(result);
-    this.client.sendMessage(username, { message: message });
+    await client.connect();
+    await client.sendMessage(username, { message: message });
+
+    return;
   }
 
+  //Reset autherizations except this one.
   async resetAuthorizations() {
-    await this.client.connect();
+    await client.connect();
+    await client.invoke(new Api.auth.ResetAuthorizations({}));
 
-    const result = await this.client.invoke(
-      new Api.auth.ResetAuthorizations({})
-    );
-    console.log(result);
+    return;
+  }
+
+  // Log out the current user.
+  async logOut() {
+    await client.connect();
+    await client.invoke(new Api.auth.LogOut({}));
+
+    return;
   }
 }
 
-module.exports = telegramClient;
+module.exports = Client;

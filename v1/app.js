@@ -5,6 +5,7 @@ const loaders = require("./src/loaders");
 const configs = require("./src/configs");
 const events = require("./src/scripts/events");
 const { TelegramClientRoutes } = require("./src/routes");
+const store = require("store2");
 
 configs();
 loaders();
@@ -32,7 +33,7 @@ app.use((error, req, res, next) => {
   return res.status(status).json({ message: message });
 });
 
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3000;
 app.listen(port, async () => {
   console.log(`Server listening on port ${port}`);
   app.use("/api/telegram-client", TelegramClientRoutes);
