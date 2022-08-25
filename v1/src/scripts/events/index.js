@@ -1,3 +1,6 @@
-const eventEmitter = require("./eventEmitter");
+const events = require("./events");
+const bot = require("./bot");
 
-module.exports = () => {};
+module.exports = () => {
+  events(), bot;
+};
