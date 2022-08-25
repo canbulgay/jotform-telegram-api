@@ -1,4 +1,5 @@
-const TelegramClient = require("../scripts/utils/TelegramClient");
+const TelegramClientService = require("../services/TelegramClientService");
+const eventEmitter = require("../scripts/events/eventEmitter");
 
 // TODO: Hiç bir fonksiyonun hata mesajı doğru bir şekilde gelmiyor. Program hata versede kullanıcıya basarılı cevabı dönüyor. Bunların düzeltilmesi lazım.
 
@@ -14,8 +15,7 @@ const setUserTelegramCredentials = async (req, res, next) => {
   const { api_key, api_hash } = req.body;
 
   try {
-    const client = new TelegramClient();
-    await client.saveCredentials(api_key, api_hash);
+    await TelegramClientService.saveCredentials(api_key, api_hash);
 
     return res.status(201).json({
       message: "Your credentials has been saved.",
@@ -38,8 +38,7 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
   const { phone_number } = req.body;
 
   try {
-    const client = new TelegramClient();
-    await client.sendCode(phone_number);
+    await TelegramClientService.sendCode(phone_number);
 
     return res.status(200).json({
       message: "Your code sent to your phone.",
@@ -59,10 +58,11 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
  * @return json
  */
 const sendMessage = async (req, res, next) => {
-  const { username, message } = req.body;
+  const { username, message, form_id } = req.body;
   try {
-    const client = new TelegramClient();
-    await client.sendMessage(username, message);
+    eventEmitter.emit("fetch:questions", form_id);
+
+    await TelegramClientService.sendMessage(username, message);
 
     return res.status(200).json({
       message: "Your message was sent successfully",
@@ -86,8 +86,7 @@ const sendMessage = async (req, res, next) => {
  */
 const terminateSessions = async (req, res, next) => {
   try {
-    const client = new TelegramClient();
-    await client.resetAuthorizations();
+    await TelegramClientService.resetAuthorizations();
 
     return res.status(200).json({
       message: "All sessions were terminated.",
@@ -108,8 +107,7 @@ const terminateSessions = async (req, res, next) => {
 const signInTheUser = async (req, res, next) => {
   const { phone_code } = req.body;
   try {
-    const client = new TelegramClient();
-    await client.signIn(phone_code);
+    await TelegramClientService.signIn(phone_code);
 
     return res.status(200).json({
       messsage: "You are logged in.",
@@ -129,8 +127,7 @@ const signInTheUser = async (req, res, next) => {
 
 const logOutTheUser = async (req, res, next) => {
   try {
-    const client = new TelegramClient();
-    await client.logOut();
+    await TelegramClientService.logOut();
 
     return res.status(200).json({
       message: "You are logged out.",

@@ -7,7 +7,7 @@ let PHONE_NUMBER;
 let PHONE_CODE_HASH;
 let client;
 
-class Client {
+class TelegramClientService {
   //Save User's credentials.
   async saveCredentials(api_key, api_hash) {
     API_KEY = parseInt(api_key);
@@ -21,13 +21,14 @@ class Client {
     );
     await client.connect();
     await client.session.setDC(2, "149.154.167.91", 80);
+
     return;
   }
 
   //Send code to user via phone_number.
   async sendCode(phone_number) {
-    PHONE_NUMBER = phone_number;
     await client.connect();
+    PHONE_NUMBER = phone_number;
     const result = await client.sendCode(
       {
         apiId: API_KEY,
@@ -37,15 +38,12 @@ class Client {
     );
 
     PHONE_CODE_HASH = result.phoneCodeHash;
-
-    console.log(result);
     return;
   }
 
   //Sign in user via phone_code.
   async signIn(phone_code) {
     await client.connect();
-
     await client.invoke(
       new Api.auth.SignIn({
         phoneNumber: PHONE_NUMBER,
@@ -53,7 +51,7 @@ class Client {
         phoneCode: phone_code,
       })
     );
-
+    console.log(await client.isUserAuthorized());
     return;
   }
 
@@ -82,4 +80,4 @@ class Client {
   }
 }
 
-module.exports = Client;
+module.exports = new TelegramClientService();
