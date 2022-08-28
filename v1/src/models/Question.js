@@ -6,6 +6,10 @@ const QuestionSchema = new Mongoose.Schema(
       type: String,
       required: true,
     },
+    username: {
+      type: String,
+      required: true,
+    },
     qid: {
       type: String,
       required: true,
@@ -22,6 +26,9 @@ const QuestionSchema = new Mongoose.Schema(
     validation: {
       type: String,
       default: "None",
+    },
+    submission: {
+      type: String,
     },
   },
   {
