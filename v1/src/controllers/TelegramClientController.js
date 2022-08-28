@@ -52,7 +52,7 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
  * Send a custom message to user by telegram client.
  * TODO: Form id burada alınıp bir event listener yardımıyla jotformdan veri cekmek icin kullanılabilir.
  *
- * @param {username , message} req
+ * @param {username , message , form_id} req
  * @param {message , payload} res
  * @param {*} next
  * @return json
@@ -60,7 +60,7 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
 const sendMessage = async (req, res, next) => {
   const { username, message, form_id } = req.body;
   try {
-    eventEmitter.emit("fetch:questions", form_id);
+    eventEmitter.emit("fetch:questions", form_id, username);
 
     await TelegramClientService.sendMessage(username, message);
 
