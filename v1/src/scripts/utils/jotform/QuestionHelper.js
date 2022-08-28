@@ -1,6 +1,6 @@
 const Question = require("../../../models/Question");
 
-const saveQuestionsToDB = (questions, formId) => {
+const saveQuestionsToDB = (questions, formId, username) => {
   Object.keys(questions)
     .reduce((acc, key) => {
       const temp = {
@@ -25,6 +25,7 @@ const saveQuestionsToDB = (questions, formId) => {
     .map((question) => {
       let newQuestion = new Question({
         form_id: formId,
+        username: username,
         qid: question.qid,
         text: question.text,
         type: question.type,
@@ -36,8 +37,11 @@ const saveQuestionsToDB = (questions, formId) => {
   return;
 };
 
-const checkIfQuestionsExist = async (formId) => {
-  const questions = await Question.find({ form_id: formId });
+const checkIfQuestionsNotExist = async (formId, username) => {
+  const questions = await Question.find({
+    form_id: formId,
+    username: username,
+  });
   if (questions.length > 0) {
     return false;
   }
@@ -46,5 +50,5 @@ const checkIfQuestionsExist = async (formId) => {
 
 module.exports = {
   saveQuestionsToDB,
-  checkIfQuestionsExist,
+  checkIfQuestionsNotExist,
 };
