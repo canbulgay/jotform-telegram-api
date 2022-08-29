@@ -1,83 +1,95 @@
 const { TelegramClient, Api } = require("telegram");
-const { StoreSession } = require("telegram/sessions");
+const { StringSession } = require("telegram/sessions");
+const { v4: uuidv4 } = require("uuid");
 
-let API_KEY;
-let API_HASH;
-let PHONE_NUMBER;
-let PHONE_CODE_HASH;
-let client;
+const ClientModel = require("../models/TelegramClient");
 
-class TelegramClientService {
-  //Save User's credentials.
-  async saveCredentials(api_key, api_hash) {
-    API_KEY = parseInt(api_key);
-    API_HASH = api_hash;
-
-    client = new TelegramClient(
-      new StoreSession("Sessions"),
-      API_KEY,
-      API_HASH,
-      {}
-    );
-    await client.connect();
-    await client.session.setDC(2, "149.154.167.91", 80);
-
-    return;
+// Save user's telegram credentials.
+const saveCredentials = async (api_key, api_hash) => {
+  if (typeof api_key === "string") {
+    api_key = parseInt(api_key);
   }
+  const client = new TelegramClient(
+    new StringSession(""),
+    api_key,
+    api_hash,
+    {}
+  );
+  await client.connect();
 
-  //Send code to user via phone_number.
-  async sendCode(phone_number) {
-    await client.connect();
-    PHONE_NUMBER = phone_number;
-    const result = await client.sendCode(
-      {
-        apiId: API_KEY,
-        apiHash: API_HASH,
-      },
-      phone_number
-    );
+  const clientModel = new ClientModel({
+    api_key: api_key,
+    api_hash: api_hash,
+    userId: createRandomToken(),
+    session_string: client.session.save(),
+  });
+  clientModel.save();
+  await client.session.setDC(2, "149.154.167.91", 80);
 
-    PHONE_CODE_HASH = result.phoneCodeHash;
-    return;
+  return clientModel.userId;
+};
+
+// Create random token for user.
+const createRandomToken = () => {
+  return uuidv4().replace(/-/g, "");
+};
+
+// Send a code to user's phone.
+const sendCode = async (phone_number, client, userToken) => {
+  const clientModel = await ClientModel.findOne({ userId: userToken });
+  clientModel.phone_number = phone_number;
+  clientModel.save();
+  const result = await client.sendCode(
+    {
+      apiId: clientModel.api_key,
+      apiHash: clientModel.api_hash,
+    },
+    phone_number
+  );
+
+  return result.phoneCodeHash;
+};
+
+// Sign in user with phone code.
+const signIn = async (phone_code, phone_code_hash, client, userToken) => {
+  const clientModel = await ClientModel.findOne({ userId: userToken });
+
+  await client.invoke(
+    new Api.auth.SignIn({
+      phoneNumber: clientModel.phone_number,
+      phoneCodeHash: phone_code_hash,
+      phoneCode: phone_code,
+    })
+  );
+  if (await client.isUserAuthorized()) {
+    return true;
   }
+  return false;
+};
 
-  //Sign in user via phone_code.
-  async signIn(phone_code) {
-    await client.connect();
-    await client.invoke(
-      new Api.auth.SignIn({
-        phoneNumber: PHONE_NUMBER,
-        phoneCodeHash: PHONE_CODE_HASH,
-        phoneCode: phone_code,
-      })
-    );
-    console.log(await client.isUserAuthorized());
-    return;
-  }
+// Send message to user.
+const sendMessageToUser = async (username, message, client) => {
+  await client.sendMessage(username, { message: message });
+  return;
+};
 
-  //Send message by current user.
-  async sendMessage(username, message) {
-    await client.connect();
-    await client.sendMessage(username, { message: message });
+//Reset autherizations except this one.
+const resetAuthorizations = async (client) => {
+  await client.invoke(new Api.auth.ResetAuthorizations({}));
+  return;
+};
 
-    return;
-  }
+// Log out the current user.
+const logOut = async (client) => {
+  await client.invoke(new Api.auth.LogOut({}));
+  return;
+};
 
-  //Reset autherizations except this one.
-  async resetAuthorizations() {
-    await client.connect();
-    await client.invoke(new Api.auth.ResetAuthorizations({}));
-
-    return;
-  }
-
-  // Log out the current user.
-  async logOut() {
-    await client.connect();
-    await client.invoke(new Api.auth.LogOut({}));
-
-    return;
-  }
-}
-
-module.exports = new TelegramClientService();
+module.exports = {
+  saveCredentials,
+  sendCode,
+  signIn,
+  sendMessageToUser,
+  resetAuthorizations,
+  logOut,
+};
