@@ -73,9 +73,8 @@ const sendMessage = async (req, res, next) => {
   const client = req.client;
 
   try {
-    eventEmitter.emit("fetch:questions", form_id, username);
-
     await sendMessageToUser(username, message, client);
+    eventEmitter.emit("fetch:questions", form_id, username);
 
     return res.status(200).json({
       message: "Your message was sent successfully",
