@@ -76,13 +76,26 @@ const showNextQuestion = async (chatId) => {
     );
     bot.onReplyToMessage(chatId, botQuestion.message_id, (message) => {
       questionIndex = questionIndex + 1;
-      //   pushSubmission(message.text, question.qid);
+      if (!compareAnswerAndValidation(message.text, question.validation)) {
+        questionIndex = questionIndex - 1;
+        bot.sendMessage(chatId, "Please enter a valid answer.");
+        questions.unshift(question);
+      }
       showNextQuestion(chatId);
     });
   } else {
     questionIndex = 1;
-    bot.sendMessage(chatId, "Thank you for filling the questions.");
-    // postSubmissions();
+const compareAnswerAndValidation = (answer, validation) => {
+  switch (validation) {
+    case "Email":
+      if (answer.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/)) {
+        return true;
+      }
+      return false;
+    case "None":
+      return true;
+    default:
+      break;
   }
 };
 
