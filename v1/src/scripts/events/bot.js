@@ -8,9 +8,10 @@ const bot = new TelegramBot(token, { polling: true });
 
 let questions = [];
 let questionsLength;
-let userCanStart = true;
+let userCanStart;
+let questionIndex;
 
-// TODO: Sorular user'a göre çekiliyor. Forn id ve user id 'nin birlikte çekilmesi lazım.
+// TODO: Sorular user'a göre çekiliyor. Form id ve user id 'nin birlikte çekilmesi lazım. Yada öncesinde kullanıcıya dolduracagı formların sorulması lazım.
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   let username = msg.from.username;
@@ -18,6 +19,7 @@ bot.onText(/\/start/, async (msg) => {
 
   if (questions.length > 0) {
     questionsLength = questions.length;
+    questionIndex = 1;
     userCanStart = true;
     sendStartMessage(chatId);
   } else {
@@ -84,7 +86,57 @@ const showNextQuestion = async (chatId) => {
       showNextQuestion(chatId);
     });
   } else {
+    askForSubmit(chatId);
+  }
+};
+
+// Ask user for submit form or start over the form
+const askForSubmit = (chatId) => {
+  bot.sendMessage(chatId, "Do you want to submit the form?", {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: "Submit Form",
+            callback_data: "submit",
+          },
+          {
+            text: "Start Over",
+            callback_data: "startOver",
+          },
+        ],
+      ],
+    },
+  });
+};
+
+//
+bot.on("callback_query", async (callbackQuery) => {
+  const action = callbackQuery.data;
+  const msg = callbackQuery.message;
+  const chatId = msg.chat.id;
+  username = msg.chat.username;
+
+  switch (action) {
+    case "submit":
+      bot.sendMessage(chatId, "Form submitted.");
+      break;
+    case "startOver":
+      bot.sendMessage(chatId, "Form started over.");
+      questions = await getUsersQuestions(username);
+      questionsLength = questions.length;
     questionIndex = 1;
+      userCanStart = true;
+
+      await showNextQuestion(chatId);
+      break;
+    default:
+      bot.sendMessage(chatId, "Please select an option.");
+      await askForSubmit(chatId);
+      break;
+  }
+});
+
 const compareAnswerAndValidation = (answer, validation) => {
   switch (validation) {
     case "Email":
