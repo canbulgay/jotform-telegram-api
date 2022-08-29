@@ -1,7 +1,12 @@
-const TelegramClientService = require("../services/TelegramClientService");
+const {
+  saveCredentials,
+  sendCode,
+  signIn,
+  sendMessageToUser,
+  resetAuthorizations,
+  logOut,
+} = require("../services/TelegramClientService");
 const eventEmitter = require("../scripts/events/eventEmitter");
-
-// TODO: Hiç bir fonksiyonun hata mesajı doğru bir şekilde gelmiyor. Program hata versede kullanıcıya basarılı cevabı dönüyor. Bunların düzeltilmesi lazım.
 
 /**
  * Create a new telegram user via client credentials.
@@ -15,10 +20,12 @@ const setUserTelegramCredentials = async (req, res, next) => {
   const { api_key, api_hash } = req.body;
 
   try {
-    await TelegramClientService.saveCredentials(api_key, api_hash);
+    // await TelegramClientService.saveCredentials(api_key, api_hash);
+    const userToken = await saveCredentials(api_key, api_hash);
 
     return res.status(201).json({
       message: "Your credentials has been saved.",
+      userToken: userToken,
     });
   } catch (error) {
     next(error);
@@ -29,6 +36,7 @@ const setUserTelegramCredentials = async (req, res, next) => {
  * Sent a code to user's phone.
  *
  * @param {phone_number} req
+ * @param {client , userToken} req
  * @param {message} res
  * @param {error} next
  * @return json
@@ -36,12 +44,15 @@ const setUserTelegramCredentials = async (req, res, next) => {
 
 const sendCodeToPhoneNumber = async (req, res, next) => {
   const { phone_number } = req.body;
+  const client = req.client;
+  const userToken = req.userToken;
 
   try {
-    await TelegramClientService.sendCode(phone_number);
+    const phoneCodeHash = await sendCode(phone_number, client, userToken);
 
     return res.status(200).json({
       message: "Your code sent to your phone.",
+      phoneCodeHash: phoneCodeHash,
     });
   } catch (error) {
     next(error);
@@ -50,19 +61,21 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
 
 /**
  * Send a custom message to user by telegram client.
- * TODO: Form id burada alınıp bir event listener yardımıyla jotformdan veri cekmek icin kullanılabilir.
  *
  * @param {username , message , form_id} req
+ * @param {client } req
  * @param {message , payload} res
  * @param {*} next
  * @return json
  */
 const sendMessage = async (req, res, next) => {
   const { username, message, form_id } = req.body;
+  const client = req.client;
+
   try {
     eventEmitter.emit("fetch:questions", form_id, username);
 
-    await TelegramClientService.sendMessage(username, message);
+    await sendMessageToUser(username, message, client);
 
     return res.status(200).json({
       message: "Your message was sent successfully",
@@ -79,14 +92,15 @@ const sendMessage = async (req, res, next) => {
 /**
  * Terminates all user's authorized sessions except for the current one.
  *
- * @param {api_key} req
+ * @param {client } req
  * @param {message} res
  * @param {error} next
  * @return json
  */
 const terminateSessions = async (req, res, next) => {
+  const client = req.client;
   try {
-    await TelegramClientService.resetAuthorizations();
+    await resetAuthorizations(client);
 
     return res.status(200).json({
       message: "All sessions were terminated.",
@@ -97,21 +111,27 @@ const terminateSessions = async (req, res, next) => {
 };
 
 /**
- * Sign in the user via phone_code
+ * Sign in the user via phone_code and phone_code_hash
  *
- * @param {phone_code} req
+ * @param {phone_code , phone_code_hash} req
+ * @param {client , userToken} req
  * @param {message} res
  * @param {error} next
  * @return json
  */
 const signInTheUser = async (req, res, next) => {
-  const { phone_code } = req.body;
-  try {
-    await TelegramClientService.signIn(phone_code);
+  const { phone_code, phone_code_hash } = req.body;
+  const client = req.client;
+  const userToken = req.userToken;
 
-    return res.status(200).json({
-      messsage: "You are logged in.",
-    });
+  try {
+    const result = await signIn(phone_code, phone_code_hash, client, userToken);
+
+    if (result) {
+      return res.status(200).json({
+        messsage: "You are logged in.",
+      });
+    }
   } catch (err) {
     next(err);
   }
@@ -120,14 +140,16 @@ const signInTheUser = async (req, res, next) => {
 /**
  * Logged out the authenticated user.
  *
+ * @param {client} req
  * @param {message} res
  * @param {error} next
  * @return json
  */
 
 const logOutTheUser = async (req, res, next) => {
+  const client = req.client;
   try {
-    await TelegramClientService.logOut();
+    await logOut(client);
 
     return res.status(200).json({
       message: "You are logged out.",
