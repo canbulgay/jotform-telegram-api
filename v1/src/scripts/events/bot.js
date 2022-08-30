@@ -1,48 +1,89 @@
 const TelegramBot = require("node-telegram-bot-api");
 
 const Question = require("../../models/Question");
+const {pushSubmissionsToJotform} = require("../utils/jotform/SubmissionHelper");
 
 const token = "5432638025:AAEYYjO0L3WKLSQyDkhHdZ5WlO3pxry-mHU";
-
 const bot = new TelegramBot(token, { polling: true });
 
-let questions = [];
-let questionsLength;
-let userCanStart;
-let questionIndex;
+const sessions = [];
 
-// TODO: Sorular user'a göre çekiliyor. Form id ve user id 'nin birlikte çekilmesi lazım. Yada öncesinde kullanıcıya dolduracagı formların sorulması lazım.
-bot.onText(/\/start/, async (msg) => {
-  const chatId = msg.chat.id;
-  let username = msg.from.username;
-  questions = await getUsersQuestions(username);
+/************************* Session Functions ******************************/
+const getUsersQuestions = async (username) => {
+  return await Question.find({ username: username });
+};
+const getSession = (username) => {
+  return sessions.find((session) => session.username === username);
+};
 
-  if (questions.length > 0) {
-    questionsLength = questions.length;
-    questionIndex = 1;
-    userCanStart = true;
-    sendStartMessage(chatId);
-  } else {
-    userCanStart = false;
-    sendCantStartMessage(chatId);
+const getSessionQuestions = (username) => {
+  const session = getSession(username);
+  if (session) {
+    return session.properties.questions;
   }
-});
+};
 
-bot.onText(/\/begin/, async (msg) => {
-  const chatId = msg.chat.id;
-  if (userCanStart) {
-    await showNextQuestion(chatId);
-  } else {
-    sendCantStartMessage(chatId);
+const getSessionSubmissions = (username) => {
+  const session = getSession(username);
+  if (session) {
+    return session.properties.submissions;
   }
-});
+};
+/************************* Session Functions ******************************/
+
+
+/************************* Message Functions ******************************/
+const showNextQuestion = async (chatId, username) => {
+  if (getSessionQuestions(username)?.length > 0) {
+    let question = getSessionQuestions(username).shift();
+
+    let botQuestion = await bot.sendMessage(chatId, question.text, {
+      reply_markup: {
+        force_reply: true,
+      },
+    });
+    bot.onReplyToMessage(chatId, botQuestion.message_id, (message) => {
+      if (!compareAnswerAndValidation(message.text, question.validation)) {
+        bot.sendMessage(chatId, "Please enter a valid answer.");
+        getSessionQuestions(username).unshift(question);
+      } else {
+        getSessionSubmissions(username).push({
+          qid: question.qid,
+          answer: message.text,
+          type: question.type,
+        });
+      }
+      showNextQuestion(chatId, username);
+    });
+  } else {
+    console.log(getSessionSubmissions(username));
+    askForSubmit(chatId);
+  }
+};
+
+const compareAnswerAndValidation = (answer, validation) => {
+  switch (validation) {
+    case "Email":
+      if (answer.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/)) {
+        return true;
+      }
+      return false;
+    case "None":
+      return true;
+    default:
+      break;
+  }
+};
+/************************* Message Functions ******************************/
+
+
+/************************* Messages ******************************/
 
 const sendStartMessage = (chatId) => {
   const welcomeMessage = "Welcome to the jotform bot.";
   const description = "This bot is for filling the questions from Jotform.";
   const instructions = "Type or press /begin to start filling the questions.";
   const startMessage = `${welcomeMessage}\n\n${description}\n\n${instructions}`;
-  //Send podo.gif in animations folder invalid file HTTP URL specified: URL host is empty
   bot.sendDocument(
     chatId,
     "https://cdn.discordapp.com/attachments/1011189838109757450/1012362776091557968/podo.gif"
@@ -58,37 +99,86 @@ const sendCantStartMessage = (chatId) => {
   bot.sendMessage(chatId, endMessage);
 };
 
-const getUsersQuestions = async (username) => {
-  return await Question.find({ username: username });
+const sendFormAlreadySubmittedMessage = (chatId) => {
+  const formAlreadySubmittedMessage =
+    "You have already submitted the form. Do you want to start over? \n If you want to start over, type or press /startover";
+
+  bot.sendMessage(chatId, formAlreadySubmittedMessage);
 };
 
-let questionIndex = 1;
-const showNextQuestion = async (chatId) => {
-  if (questions.length > 0) {
-    let question = questions.shift();
+const sendContinueFormMessage = (chatId) => {
+  const continueFormMessage =
+    "You have already started filling the form. Do you want to continue? \n If you want to continue, type or press /continue \n If you want to start over, type or press /startover";
+  
+  bot.sendMessage(chatId, continueFormMessage);
+};
 
-    let botQuestion = await bot.sendMessage(
-      chatId,
-      `(${questionIndex} / ${questionsLength}) ` + question.text,
-      {
-        reply_markup: {
-          force_reply: true,
+/************************* Messages ******************************/
+
+
+/************************* Bot Functions ******************************/
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id;
+  let username = msg.chat.username;
+  if (!getSession(username)) {
+    const questions = await getUsersQuestions(username);
+      if (questions.length > 0) {
+      sessions.push({
+        username: username,
+        formId : questions[0].form_id,
+        properties: {
+          questions: questions,
+          submissions: [],
         },
-      }
-    );
-    bot.onReplyToMessage(chatId, botQuestion.message_id, (message) => {
-      questionIndex = questionIndex + 1;
-      if (!compareAnswerAndValidation(message.text, question.validation)) {
-        questionIndex = questionIndex - 1;
-        bot.sendMessage(chatId, "Please enter a valid answer.");
-        questions.unshift(question);
-      }
-      showNextQuestion(chatId);
-    });
-  } else {
-    askForSubmit(chatId);
+      });
+    }
   }
-};
+
+  if (
+    getSessionQuestions(username)?.length > 0 &&
+    !getSessionSubmissions(username)?.length > 0
+  ) {
+    sendStartMessage(chatId);
+  } else if (
+    getSessionQuestions(username)?.length > 0 &&
+    getSessionSubmissions(username)?.length > 0
+  ) {
+    sendContinueFormMessage(chatId);
+  } else if (
+    !getSessionQuestions(username)?.length > 0 &&
+    getSessionSubmissions(username)?.length > 0
+  ) {
+    sendFormAlreadySubmittedMessage(chatId);
+  } else {
+    sendCantStartMessage(chatId);
+  }
+});
+
+bot.onText(/\/begin/, (msg) => {
+  const chatId = msg.chat.id;
+  let username = msg.chat.username;
+  showNextQuestion(chatId, username);
+});
+
+bot.onText(/\/startover/, async (msg) => {
+  const chatId = msg.chat.id;
+  let username = msg.chat.username;
+  //clear session submissions
+  if(getSession(username)){
+  getSessionSubmissions(username) = [];
+  getSessionQuestions(username) = await getUsersQuestions(username);
+  showNextQuestion(chatId, username);
+  }
+});
+
+bot.onText(/\/continue/, (msg) => {
+  const chatId = msg.chat.id;
+  let username = msg.chat.username;
+  showNextQuestion(chatId, username);
+});
+
+//handling bot errors
+bot.on("polling_error", (err) => console.log(err));
 
 // Ask user for submit form or start over the form
 const askForSubmit = (chatId) => {
@@ -110,7 +200,6 @@ const askForSubmit = (chatId) => {
   });
 };
 
-//
 bot.on("callback_query", async (callbackQuery) => {
   const action = callbackQuery.data;
   const msg = callbackQuery.message;
@@ -120,15 +209,15 @@ bot.on("callback_query", async (callbackQuery) => {
   switch (action) {
     case "submit":
       bot.sendMessage(chatId, "Form submitted.");
+      bot.sendMessage(chatId, "We will send you your submission in a few seconds ");
+      const URL = await pushSubmissionsToJotform(getSessionSubmissions(username), getSession(username)?.formId);
+      const submissionMessage = `Your submission is available at ${URL}`;
+      bot.sendMessage(chatId, submissionMessage);
       break;
     case "startOver":
       bot.sendMessage(chatId, "Form started over.");
-      questions = await getUsersQuestions(username);
-      questionsLength = questions.length;
-    questionIndex = 1;
-      userCanStart = true;
 
-      await showNextQuestion(chatId);
+      // await showNextQuestion(chatId);
       break;
     default:
       bot.sendMessage(chatId, "Please select an option.");
@@ -136,19 +225,7 @@ bot.on("callback_query", async (callbackQuery) => {
       break;
   }
 });
+/************************* Bot Functions ******************************/
 
-const compareAnswerAndValidation = (answer, validation) => {
-  switch (validation) {
-    case "Email":
-      if (answer.match(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/)) {
-        return true;
-      }
-      return false;
-    case "None":
-      return true;
-    default:
-      break;
-  }
-};
 
 module.exports = bot;
