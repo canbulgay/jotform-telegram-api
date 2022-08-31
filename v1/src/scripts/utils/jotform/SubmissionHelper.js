@@ -4,9 +4,8 @@ const pushSubmissionsToJotform = async (submissions, formId) => {
   const submissionParams = prepareSubmissionsBeforePushing(submissions);
   const data = await submitFormSubmissions(formId, submissionParams);
 
-  let URL = data.content.URL.toString();
-  URL = URL.replace("api.", "");
-  return URL;
+  const submissionId = data.content.submissionID;;
+  return submissionId;
 };
 
 const prepareSubmissionsBeforePushing = (submissions) => {
