@@ -3,10 +3,11 @@ const {
   sendCode,
   signIn,
   sendMessageToUser,
-  resetAuthorizations,
   logOut,
 } = require("../services/TelegramClientService");
+
 const eventEmitter = require("../scripts/events/eventEmitter");
+const TelegramButton = require("../models/TelegramButton");
 
 /**
  * Create a new telegram user via client credentials.
@@ -20,7 +21,6 @@ const setUserTelegramCredentials = async (req, res, next) => {
   const { api_key, api_hash } = req.body;
 
   try {
-    // await TelegramClientService.saveCredentials(api_key, api_hash);
     const userToken = await saveCredentials(api_key, api_hash);
 
     return res.status(201).json({
@@ -69,11 +69,14 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
  * @return json
  */
 const sendMessage = async (req, res, next) => {
-  const { username, message, form_id } = req.body;
+  const { username } = req.body;
+  const form_id = req.form_id;
+  const message = req.message;
+  const bot_url = req.bot_url;
   const client = req.client;
 
   try {
-    await sendMessageToUser(username, message, client);
+    await sendMessageToUser(username, message, bot_url, client);
     eventEmitter.emit("fetch:questions", form_id, username);
 
     return res.status(200).json({
@@ -82,27 +85,6 @@ const sendMessage = async (req, res, next) => {
         username: username,
         message: message,
       },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Terminates all user's authorized sessions except for the current one.
- *
- * @param {client } req
- * @param {message} res
- * @param {error} next
- * @return json
- */
-const terminateSessions = async (req, res, next) => {
-  const client = req.client;
-  try {
-    await resetAuthorizations(client);
-
-    return res.status(200).json({
-      message: "All sessions were terminated.",
     });
   } catch (error) {
     next(error);
@@ -137,6 +119,36 @@ const signInTheUser = async (req, res, next) => {
 };
 
 /**
+ * Create send telegram button.
+ *
+ * @param {form_id , message , sheet_id , column_id } req
+ * @param {message} res
+ * @param {error} next
+ * @return json
+ */
+const createSendTelegramButton = async (req, res, next) => {
+  const { form_id, message, sheet_id, column_id } = req.body;
+  const userToken = req.userToken;
+
+  try {
+    const button = new TelegramButton({
+      client_id: userToken,
+      form_id: form_id,
+      message: message,
+      sheet_id: sheet_id,
+      column_id: column_id,
+    });
+    await button.save();
+
+    return res.status(201).json({
+      message: "Your button has been created.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Logged out the authenticated user.
  *
  * @param {client} req
@@ -162,7 +174,7 @@ module.exports = {
   setUserTelegramCredentials,
   sendCodeToPhoneNumber,
   sendMessage,
-  terminateSessions,
   signInTheUser,
   logOutTheUser,
+  createSendTelegramButton,
 };
