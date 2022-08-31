@@ -2,7 +2,7 @@ const axios = require("axios");
 
 const jotformToken = "088669390670debab69ffc56927e0801";
 
-const getFormQuestions = (formId) => async (_req, _res, next) => {
+const getFormQuestions = async (formId) => {
   try {
     return await axios.get(
       `https://api.jotform.com/form/${formId}/questions?apiKey=${jotformToken}`
@@ -24,6 +24,7 @@ const submitFormSubmissions = async (formId, submissions) => {
     console.log(error);
   }
 };
+
 module.exports = {
   getFormQuestions,
   submitFormSubmissions,
