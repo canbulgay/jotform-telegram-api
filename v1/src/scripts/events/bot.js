@@ -65,9 +65,7 @@ const showNextQuestion = async (chatId, username) => {
       showNextQuestion(chatId, username);
     });
   } else {
-    console.log("Burdayım5");
     askForSubmitOrStartOver(chatId);
-    console.log("Burdayım6");
   }
 };
 
@@ -203,20 +201,11 @@ bot.onText(/\/submit/, async (msg) => {
   const chatId = msg.chat.id;
   let username = msg.chat.username;
   const session = getSession(username);
-  if (getSessionFormSubmissionId(username) === null) {
-    const submissionId = await pushSubmissionsToJotform(
-      session.properties.submissions,
-      session.formId
-    );
-    bot.sendMessage(chatId, "Form submited.");
-  } else {
-    const submissionId = await updateSubmissionsToJotform(
-      session.properties.submissions,
-      session.formId,
-      getSessionFormSubmissionId(username)
-    );
-    bot.sendMessage(chatId, "Form updated.");
-  }
+  const submissionId = await pushSubmissionsToJotform(
+    session.properties.submissions,
+    session.formId
+  );
+  bot.sendMessage(chatId, "Form submited.");
   session.properties.submissionId = submissionId;
 });
 

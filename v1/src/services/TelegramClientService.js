@@ -1,6 +1,5 @@
 const { TelegramClient, Api } = require("telegram");
 const { StringSession } = require("telegram/sessions");
-const { v4: uuidv4 } = require("uuid");
 
 const ClientModel = require("../models/TelegramClient");
 
@@ -20,23 +19,17 @@ const saveCredentials = async (api_key, api_hash) => {
   const clientModel = new ClientModel({
     api_key: api_key,
     api_hash: api_hash,
-    userId: createRandomToken(),
     session_string: client.session.save(),
   });
   clientModel.save();
   await client.session.setDC(2, "149.154.167.91", 80);
 
-  return clientModel.userId;
-};
-
-// Create random token for user.
-const createRandomToken = () => {
-  return uuidv4().replace(/-/g, "");
+  return clientModel._id;
 };
 
 // Send a code to user's phone.
 const sendCode = async (phone_number, client, userToken) => {
-  const clientModel = await ClientModel.findOne({ userId: userToken });
+  const clientModel = await ClientModel.findOne({ _id: userToken });
   clientModel.phone_number = phone_number;
   clientModel.save();
   const result = await client.sendCode(
@@ -52,7 +45,7 @@ const sendCode = async (phone_number, client, userToken) => {
 
 // Sign in user with phone code.
 const signIn = async (phone_code, phone_code_hash, client, userToken) => {
-  const clientModel = await ClientModel.findOne({ userId: userToken });
+  const clientModel = await ClientModel.findOne({ _id: userToken });
 
   await client.invoke(
     new Api.auth.SignIn({
@@ -68,14 +61,9 @@ const signIn = async (phone_code, phone_code_hash, client, userToken) => {
 };
 
 // Send message to user.
-const sendMessageToUser = async (username, message, client) => {
-  await client.sendMessage(username, { message: message });
-  return;
-};
-
-//Reset autherizations except this one.
-const resetAuthorizations = async (client) => {
-  await client.invoke(new Api.auth.ResetAuthorizations({}));
+const sendMessageToUser = async (username, message, bot_url, client) => {
+  const messageWithBot = `${message}\n\n Jotform Bot => ${bot_url}`;
+  await client.sendMessage(username, { message: messageWithBot });
   return;
 };
 
@@ -90,6 +78,5 @@ module.exports = {
   sendCode,
   signIn,
   sendMessageToUser,
-  resetAuthorizations,
   logOut,
 };
