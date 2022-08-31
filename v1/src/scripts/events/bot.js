@@ -1,7 +1,9 @@
 const TelegramBot = require("node-telegram-bot-api");
 
 const Question = require("../../models/Question");
-const {pushSubmissionsToJotform} = require("../utils/jotform/SubmissionHelper");
+const {
+  pushSubmissionsToJotform,
+} = require("../utils/jotform/SubmissionHelper");
 
 const token = "5432638025:AAEYYjO0L3WKLSQyDkhHdZ5WlO3pxry-mHU";
 const bot = new TelegramBot(token, { polling: true });
@@ -29,8 +31,15 @@ const getSessionSubmissions = (username) => {
     return session.properties.submissions;
   }
 };
-/************************* Session Functions ******************************/
 
+const getSessionFormSubmissionId = (username) => {
+  const session = getSession(username);
+  if (session) {
+    return session.properties.submissionId;
+  }
+};
+
+/************************* Session Functions ******************************/
 
 /************************* Message Functions ******************************/
 const showNextQuestion = async (chatId, username) => {
@@ -56,8 +65,9 @@ const showNextQuestion = async (chatId, username) => {
       showNextQuestion(chatId, username);
     });
   } else {
-    console.log(getSessionSubmissions(username));
-    askForSubmit(chatId);
+    console.log("Burdayım5");
+    askForSubmitOrStartOver(chatId);
+    console.log("Burdayım6");
   }
 };
 
@@ -75,7 +85,6 @@ const compareAnswerAndValidation = (answer, validation) => {
   }
 };
 /************************* Message Functions ******************************/
-
 
 /************************* Messages ******************************/
 
@@ -109,12 +118,20 @@ const sendFormAlreadySubmittedMessage = (chatId) => {
 const sendContinueFormMessage = (chatId) => {
   const continueFormMessage =
     "You have already started filling the form. Do you want to continue? \n If you want to continue, type or press /continue \n If you want to start over, type or press /startover";
-  
+
   bot.sendMessage(chatId, continueFormMessage);
 };
 
-/************************* Messages ******************************/
+const askForSubmitOrStartOver = (chatId) => {
+  console.log("Burdayım3");
 
+  const submitOrStartOverMessage =
+    "Do you want to submit the form or start over? \n If you want to submit, type or press /submit \n If you want to start over, type or press /startover";
+
+  bot.sendMessage(chatId, submitOrStartOverMessage);
+};
+
+/************************* Messages ******************************/
 
 /************************* Bot Functions ******************************/
 bot.onText(/\/start/, async (msg) => {
@@ -122,13 +139,14 @@ bot.onText(/\/start/, async (msg) => {
   let username = msg.chat.username;
   if (!getSession(username)) {
     const questions = await getUsersQuestions(username);
-      if (questions.length > 0) {
+    if (questions.length > 0) {
       sessions.push({
         username: username,
-        formId : questions[0].form_id,
+        formId: questions[0].form_id,
         properties: {
           questions: questions,
           submissions: [],
+          submissionId: null,
         },
       });
     }
@@ -144,10 +162,7 @@ bot.onText(/\/start/, async (msg) => {
     getSessionSubmissions(username)?.length > 0
   ) {
     sendContinueFormMessage(chatId);
-  } else if (
-    !getSessionQuestions(username)?.length > 0 &&
-    getSessionSubmissions(username)?.length > 0
-  ) {
+  } else if (getSessionFormSubmissionId(username) !== null) {
     sendFormAlreadySubmittedMessage(chatId);
   } else {
     sendCantStartMessage(chatId);
@@ -163,69 +178,54 @@ bot.onText(/\/begin/, (msg) => {
 bot.onText(/\/startover/, async (msg) => {
   const chatId = msg.chat.id;
   let username = msg.chat.username;
-  //clear session submissions
-  if(getSession(username)){
-  getSessionSubmissions(username) = [];
-  getSessionQuestions(username) = await getUsersQuestions(username);
-  showNextQuestion(chatId, username);
+
+  if (getSession(username)) {
+    bot.sendMessage(chatId, "Form started over.");
+    let session = getSession(username);
+    session.properties.submissions = [];
+    session.properties.questions = await getUsersQuestions(username);
+    showNextQuestion(chatId, username);
   }
 });
 
 bot.onText(/\/continue/, (msg) => {
   const chatId = msg.chat.id;
   let username = msg.chat.username;
-  showNextQuestion(chatId, username);
+  if (
+    getSessionQuestions(username)?.length > 0 &&
+    getSessionSubmissions(username)?.length > 0
+  ) {
+    showNextQuestion(chatId, username);
+  }
+});
+
+bot.onText(/\/submit/, async (msg) => {
+  const chatId = msg.chat.id;
+  let username = msg.chat.username;
+  const session = getSession(username);
+  if (getSessionFormSubmissionId(username) === null) {
+    const submissionId = await pushSubmissionsToJotform(
+      session.properties.submissions,
+      session.formId
+    );
+    bot.sendMessage(chatId, "Form submited.");
+  } else {
+    const submissionId = await updateSubmissionsToJotform(
+      session.properties.submissions,
+      session.formId,
+      getSessionFormSubmissionId(username)
+    );
+    bot.sendMessage(chatId, "Form updated.");
+  }
+  session.properties.submissionId = submissionId;
 });
 
 //handling bot errors
-bot.on("polling_error", (err) => console.log(err));
-
-// Ask user for submit form or start over the form
-const askForSubmit = (chatId) => {
-  bot.sendMessage(chatId, "Do you want to submit the form?", {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: "Submit Form",
-            callback_data: "submit",
-          },
-          {
-            text: "Start Over",
-            callback_data: "startOver",
-          },
-        ],
-      ],
-    },
-  });
-};
-
-bot.on("callback_query", async (callbackQuery) => {
-  const action = callbackQuery.data;
-  const msg = callbackQuery.message;
-  const chatId = msg.chat.id;
-  username = msg.chat.username;
-
-  switch (action) {
-    case "submit":
-      bot.sendMessage(chatId, "Form submitted.");
-      bot.sendMessage(chatId, "We will send you your submission in a few seconds ");
-      const URL = await pushSubmissionsToJotform(getSessionSubmissions(username), getSession(username)?.formId);
-      const submissionMessage = `Your submission is available at ${URL}`;
-      bot.sendMessage(chatId, submissionMessage);
-      break;
-    case "startOver":
-      bot.sendMessage(chatId, "Form started over.");
-
-      // await showNextQuestion(chatId);
-      break;
-    default:
-      bot.sendMessage(chatId, "Please select an option.");
-      await askForSubmit(chatId);
-      break;
-  }
+bot.on("polling_error", (err) => {
+  console.log(err);
+  bot.stopPolling();
 });
-/************************* Bot Functions ******************************/
 
+/************************* Bot Functions ******************************/
 
 module.exports = bot;
