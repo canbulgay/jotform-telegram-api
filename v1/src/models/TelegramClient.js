@@ -2,10 +2,6 @@ const Mongoose = require("mongoose");
 
 const TelegramClientSchema = new Mongoose.Schema(
   {
-    userId: {
-      type: String,
-      required: true,
-    },
     api_key: {
       type: Number,
     },
@@ -17,12 +13,6 @@ const TelegramClientSchema = new Mongoose.Schema(
       default: "",
     },
     phone_number: {
-      type: String,
-    },
-    form_id: {
-      type: String,
-    },
-    column_id: {
       type: String,
     },
   },
