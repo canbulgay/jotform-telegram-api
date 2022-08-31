@@ -27,9 +27,6 @@ const QuestionSchema = new Mongoose.Schema(
       type: String,
       default: "None",
     },
-    submission: {
-      type: String,
-    },
   },
   {
     timestamps: true,
