@@ -5,18 +5,23 @@ const {
   setUserTelegramCredentials,
   sendMessage,
   sendCodeToPhoneNumber,
-  terminateSessions,
   signInTheUser,
   logOutTheUser,
+  createSendTelegramButton,
 } = require("../controllers/TelegramClientController");
 
 const telegram_auth_middleware = require("../middlewares/telegram-client-auth");
+const telegram_button = require("../middlewares/telegram-button");
 
 router.post("/set-client-credentials", setUserTelegramCredentials);
 router.post("/send-code", telegram_auth_middleware, sendCodeToPhoneNumber);
 router.post("/sign-in", telegram_auth_middleware, signInTheUser);
-router.post("/send-message", telegram_auth_middleware, sendMessage);
-router.get("/terminate-sessions", telegram_auth_middleware, terminateSessions);
+router.post(
+  "/create-button",
+  telegram_auth_middleware,
+  createSendTelegramButton
+);
+router.post("/send-message", telegram_button, sendMessage);
 router.get("/logout", telegram_auth_middleware, logOutTheUser);
 
 module.exports = router;
