@@ -32,25 +32,30 @@ const getSessionSubmissions = (username) => {
   }
 };
 
-const getSessionFormSubmissionId = (username) => {
-  const session = getSession(username);
-  if (session) {
-    return session.properties.submissionId;
-  }
-};
-
 /************************* Session Functions ******************************/
 
 /************************* Message Functions ******************************/
-const showNextQuestion = async (chatId, username) => {
+const showNextQuestion = async (chatId, username, questionIndex) => {
+  let session = getSession(username);
   if (getSessionQuestions(username)?.length > 0) {
-    let question = getSessionQuestions(username).shift();
+    let question;
+    if (session.properties.currentQuestion === null) {
+      question = getSessionQuestions(username).shift();
+      session.properties.currentQuestion = question;
+    } else {
+      question = session.properties.currentQuestion;
+    }
+    let index = questionIndex;
 
-    let botQuestion = await bot.sendMessage(chatId, question.text, {
-      reply_markup: {
-        force_reply: true,
-      },
-    });
+    let botQuestion = await bot.sendMessage(
+      chatId,
+      `${questionIndex}) ${question.text}`,
+      {
+        reply_markup: {
+          force_reply: true,
+        },
+      }
+    );
     bot.onReplyToMessage(chatId, botQuestion.message_id, (message) => {
       if (!compareAnswerAndValidation(message.text, question.validation)) {
         bot.sendMessage(chatId, "Please enter a valid answer.");
@@ -61,8 +66,11 @@ const showNextQuestion = async (chatId, username) => {
           answer: message.text,
           type: question.type,
         });
+        index = index + 1;
+        session.properties.questionIndex = index;
       }
-      showNextQuestion(chatId, username);
+      session.properties.currentQuestion = null;
+      showNextQuestion(chatId, username, index);
     });
   } else {
     askForSubmitOrStartOver(chatId);
@@ -108,23 +116,21 @@ const sendCantStartMessage = (chatId) => {
 
 const sendFormAlreadySubmittedMessage = (chatId) => {
   const formAlreadySubmittedMessage =
-    "You have already submitted the form. Do you want to start over? \n If you want to start over, type or press /startover";
+    "You have already submitted the form. Do you want to start over? \n If you want to start over, type or press /again";
 
   bot.sendMessage(chatId, formAlreadySubmittedMessage);
 };
 
 const sendContinueFormMessage = (chatId) => {
   const continueFormMessage =
-    "You have already started filling the form. Do you want to continue? \n If you want to continue, type or press /continue \n If you want to start over, type or press /startover";
+    "You have already started filling the form. Do you want to continue? \n If you want to continue, type or press /continue \n If you want to start over, type or press /again";
 
   bot.sendMessage(chatId, continueFormMessage);
 };
 
 const askForSubmitOrStartOver = (chatId) => {
-  console.log("Burdayım3");
-
   const submitOrStartOverMessage =
-    "Do you want to submit the form or start over? \n If you want to submit, type or press /submit \n If you want to start over, type or press /startover";
+    "Do you want to submit the form or start over? \n If you want to submit, type or press /submit \n If you want to start over, type or press /again";
 
   bot.sendMessage(chatId, submitOrStartOverMessage);
 };
@@ -145,6 +151,8 @@ bot.onText(/\/start/, async (msg) => {
           questions: questions,
           submissions: [],
           submissionId: null,
+          questionIndex: 1,
+          currentQuestion: null,
         },
       });
     }
@@ -160,7 +168,10 @@ bot.onText(/\/start/, async (msg) => {
     getSessionSubmissions(username)?.length > 0
   ) {
     sendContinueFormMessage(chatId);
-  } else if (getSessionFormSubmissionId(username) !== null) {
+  } else if (
+    !getSessionQuestions(username)?.length > 0 &&
+    getSessionSubmissions(username)?.length > 0
+  ) {
     sendFormAlreadySubmittedMessage(chatId);
   } else {
     sendCantStartMessage(chatId);
@@ -170,30 +181,33 @@ bot.onText(/\/start/, async (msg) => {
 bot.onText(/\/begin/, (msg) => {
   const chatId = msg.chat.id;
   let username = msg.chat.username;
-  showNextQuestion(chatId, username);
+  let questionIndex = getSession(username)?.properties.questionIndex;
+  showNextQuestion(chatId, username, questionIndex);
 });
 
-bot.onText(/\/startover/, async (msg) => {
+bot.onText(/\/again/, async (msg) => {
   const chatId = msg.chat.id;
   let username = msg.chat.username;
 
   if (getSession(username)) {
     bot.sendMessage(chatId, "Form started over.");
     let session = getSession(username);
+    session.properties.questionIndex = 1;
     session.properties.submissions = [];
     session.properties.questions = await getUsersQuestions(username);
-    showNextQuestion(chatId, username);
+    showNextQuestion(chatId, username, session.properties.questionIndex);
   }
 });
 
 bot.onText(/\/continue/, (msg) => {
   const chatId = msg.chat.id;
   let username = msg.chat.username;
+  let questionIndex = getSession(username)?.properties.questionIndex;
   if (
     getSessionQuestions(username)?.length > 0 &&
     getSessionSubmissions(username)?.length > 0
   ) {
-    showNextQuestion(chatId, username);
+    showNextQuestion(chatId, username, questionIndex);
   }
 });
 
