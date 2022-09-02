@@ -4,12 +4,17 @@ const { StringSession } = require("telegram/sessions");
 const ClientModel = require("../models/TelegramClient");
 
 module.exports = async (req, res, next) => {
-  // TODO: userToken dinamik girildi. Statik olarak header'dan alınmalıç
+  // check user token in cookies
+  const userToken = req.cookies.userToken;
+  if (!userToken) {
+    return res.status(404).json({
+      message: "Your user token is not found.",
+    });
+  }
 
-  const userToken = "c38e4be0ee2046b8adbb9eda4d6dab8c";
-  const telegramClient = await ClientModel.findOne({ userId: userToken });
+  const telegramClient = await ClientModel.findOne({ _id: userToken });
   if (!telegramClient) {
-    return res.status(400).json({
+    return res.status(404).json({
       message: "Telegram client not found",
     });
   }
