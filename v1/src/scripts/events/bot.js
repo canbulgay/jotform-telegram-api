@@ -237,6 +237,34 @@ bot.onText(/\/submit/, async (msg) => {
   );
   bot.sendMessage(chatId, "Form submited.");
   session.properties.submissionId = submissionId;
+  }
+});
+
+bot.onText(/\/skip/, async (msg) => {
+  const chatId = msg.chat.id;
+  let username = msg.chat.username;
+  const session = getSession(username);
+  const questions = getSessionQuestions(username);
+  const submissions = getSessionSubmissions(username);
+
+  if (compareQuestionIsRequired(questions[0])) {
+    bot.sendMessage(chatId, "This question is required. You can't skip it.");
+    showNextQuestion(chatId, username, session.properties.questionIndex);
+  } else {
+    session.properties.questionIndex++;
+    const question = questions.shift();
+    session.properties.currentQuestion = null;
+    submissions.push({
+      qid: question.qid,
+      answer: "",
+      type: question.type,
+      required: question.required,
+      text: question.text,
+      username: username,
+      validation: question.validation,
+});
+    showNextQuestion(chatId, username, session.properties.questionIndex);
+  }
 });
 
 //handling bot errors
