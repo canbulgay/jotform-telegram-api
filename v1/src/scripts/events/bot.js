@@ -267,6 +267,24 @@ bot.onText(/\/skip/, async (msg) => {
   }
 });
 
+bot.onText(/\/back/, async (msg) => {
+  const chatId = msg.chat.id;
+  let username = msg.chat.username;
+  const session = getSession(username);
+  const questions = getSessionQuestions(username);
+  const submissions = getSessionSubmissions(username);
+
+  if (session?.properties?.questionIndex > 1) {
+    session.properties.questionIndex--;
+    const question = submissions.pop();
+    questions.unshift(question);
+    session.properties.currentQuestion = null;
+    showNextQuestion(chatId, username, session.properties.questionIndex);
+  } else {
+    bot.sendMessage(chatId, "You can't go back anymore.");
+    showNextQuestion(chatId, username, session.properties.questionIndex);
+  }
+}),
 //handling bot errors
 bot.on("polling_error", (err) => {
   console.log(err);
