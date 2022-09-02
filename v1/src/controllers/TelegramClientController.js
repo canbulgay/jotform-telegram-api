@@ -12,8 +12,8 @@ const TelegramButton = require("../models/TelegramButton");
 /**
  * Create a new telegram user via client credentials.
  *
- * @param {api_key , api_hash} req
- * @param {message} res
+ * @param {api_key , api_hash} req.body
+ * @param {message, userToken} res
  * @param {error} next
  * @returns
  */
@@ -23,9 +23,12 @@ const setUserTelegramCredentials = async (req, res, next) => {
   try {
     const userToken = await saveCredentials(api_key, api_hash);
 
+    res.cookie("userToken", userToken, {
+      maxAge: 3600000,
+    });
+
     return res.status(201).json({
       message: "Your credentials has been saved.",
-      userToken: userToken,
     });
   } catch (error) {
     next(error);
@@ -35,9 +38,9 @@ const setUserTelegramCredentials = async (req, res, next) => {
 /**
  * Sent a code to user's phone.
  *
- * @param {phone_number} req
+ * @param {phone_number} req.body
  * @param {client , userToken} req
- * @param {message} res
+ * @param {message , phoneCodeHash } res
  * @param {error} next
  * @return json
  */
@@ -60,12 +63,76 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
 };
 
 /**
+ * Sign in the user via phone_code and phone_code_hash
+ *
+ * @param {phone_code , phone_code_hash} req.body
+ * @param {client , userToken} req
+ * @param {message , userData} res
+ * @param {error} next
+ * @return json
+ */
+const signInTheUser = async (req, res, next) => {
+  const { phone_code, phone_code_hash } = req.body;
+  const client = req.client;
+  const userToken = req.userToken;
+
+  try {
+    const userData = await signIn(
+      phone_code,
+      phone_code_hash,
+      client,
+      userToken
+    );
+    // Delete cookie for userToken
+    res.clearCookie("userToken");
+
+    if (userData) {
+      return res.status(200).json({
+        messsage: "You are logged in.",
+        user: userData,
+      });
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Create send telegram button.
+ *
+ * @param {form_id , message , sheet_id , column_id , userToken} req.body
+ * @param {message} res
+ * @param {error} next
+ * @return json
+ */
+const createSendTelegramButton = async (req, res, next) => {
+  const { form_id, message, sheet_id, column_id, userToken } = req.body;
+
+  try {
+    const button = new TelegramButton({
+      client_id: userToken,
+      form_id: form_id,
+      message: message,
+      sheet_id: sheet_id,
+      column_id: column_id,
+    });
+    await button.save();
+
+    return res.status(201).json({
+      message: "Your button has been created.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Send a custom message to user by telegram client.
  *
- * @param {username , message , form_id} req
- * @param {client } req
+ * @param {username} req.body
+ * @param {client, form_id , bot_url , message } req
  * @param {message , payload} res
- * @param {*} next
+ * @param {error} next
  * @return json
  */
 const sendMessage = async (req, res, next) => {
@@ -92,66 +159,9 @@ const sendMessage = async (req, res, next) => {
 };
 
 /**
- * Sign in the user via phone_code and phone_code_hash
- *
- * @param {phone_code , phone_code_hash} req
- * @param {client , userToken} req
- * @param {message} res
- * @param {error} next
- * @return json
- */
-const signInTheUser = async (req, res, next) => {
-  const { phone_code, phone_code_hash } = req.body;
-  const client = req.client;
-  const userToken = req.userToken;
-
-  try {
-    const result = await signIn(phone_code, phone_code_hash, client, userToken);
-
-    if (result) {
-      return res.status(200).json({
-        messsage: "You are logged in.",
-      });
-    }
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
- * Create send telegram button.
- *
- * @param {form_id , message , sheet_id , column_id } req
- * @param {message} res
- * @param {error} next
- * @return json
- */
-const createSendTelegramButton = async (req, res, next) => {
-  const { form_id, message, sheet_id, column_id } = req.body;
-  const userToken = req.userToken;
-
-  try {
-    const button = new TelegramButton({
-      client_id: userToken,
-      form_id: form_id,
-      message: message,
-      sheet_id: sheet_id,
-      column_id: column_id,
-    });
-    await button.save();
-
-    return res.status(201).json({
-      message: "Your button has been created.",
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
  * Logged out the authenticated user.
  *
- * @param {client} req
+ * @param {client , userToken} req
  * @param {message} res
  * @param {error} next
  * @return json

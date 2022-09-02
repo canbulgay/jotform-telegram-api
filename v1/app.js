@@ -1,11 +1,11 @@
 const express = require("express");
 const helmet = require("helmet");
+const cookieParser = require("cookie-parser");
 
 const loaders = require("./src/loaders");
 const configs = require("./src/configs");
 const events = require("./src/scripts/events");
 const { TelegramClientRoutes } = require("./src/routes");
-const store = require("store2");
 
 configs();
 loaders();
@@ -15,6 +15,7 @@ helmet();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -33,8 +34,8 @@ app.use((error, req, res, next) => {
   return res.status(status).json({ message: message });
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, async () => {
+const port = 8080;
+app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
   app.use("/api/telegram-client", TelegramClientRoutes);
 });
