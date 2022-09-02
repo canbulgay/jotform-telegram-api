@@ -15,6 +15,15 @@ const TelegramClientSchema = new Mongoose.Schema(
     phone_number: {
       type: String,
     },
+    first_name: {
+      type: String,
+    },
+    last_name: {
+      type: String,
+    },
+    username: {
+      type: String,
+    },
   },
   {
     timestamps: true,
