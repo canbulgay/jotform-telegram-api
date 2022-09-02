@@ -58,6 +58,11 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
       phoneCodeHash: phoneCodeHash,
     });
   } catch (error) {
+    if (error.errorMessage === "PHONE_NUMBER_INVALID") {
+      return res.status(406).json({
+        error: "Phone number is invalid.",
+      });
+    }
     next(error);
   }
 };
@@ -92,8 +97,27 @@ const signInTheUser = async (req, res, next) => {
         user: userData,
       });
     }
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    switch (error.errorMessage) {
+      case "PHONE_CODE_INVALID":
+        res.status(406).json({
+          error: "Phone code is invalid.",
+        });
+        break;
+      case "PHONE_CODE_EXPIRED":
+        res.status(400).json({
+          error: "Phone code is expired.",
+        });
+        break;
+      case "PHONE_CODE_EMPTY":
+        res.status(406).json({
+          error: "Phone code hash is invalid.",
+        });
+        break;
+      default:
+        break;
+    }
+    next(error);
   }
 };
 
@@ -154,7 +178,9 @@ const sendMessage = async (req, res, next) => {
       },
     });
   } catch (error) {
-    next(error);
+    return res.status(404).json({
+      error: "User not found.",
+    });
   }
 };
 
