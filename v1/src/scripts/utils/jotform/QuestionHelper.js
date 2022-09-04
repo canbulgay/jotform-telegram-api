@@ -1,6 +1,9 @@
 const Question = require("../../../models/Question");
+const Form = require("../../../models/Form");
 
-const saveQuestionsToDB = (questions, formId, username) => {
+const saveQuestionsToDB = async (questions, formId, username) => {
+  const form = await checkIsFormExist(formId, username);
+
   Object.keys(questions)
     .reduce((acc, key) => {
       const temp = {
@@ -15,40 +18,51 @@ const saveQuestionsToDB = (questions, formId, username) => {
     }, [])
     .filter(
       (question) =>
-        question.type !== "control_head" &&
         question.type !== "control_pagebreak" &&
         question.type !== "control_captcha" &&
         question.type !== "control_divider" &&
         question.type !== "control_signature" &&
         question.type !== "control_button"
     )
-    .map((question) => {
-      let newQuestion = new Question({
-        form_id: formId,
-        username: username,
-        qid: question.qid,
-        text: question.text,
-        type: question.type,
-        required: question.required,
-        validation: question.validation,
-      });
-      newQuestion.save();
+    .map(async (question) => {
+      if (question.type === "control_head") {
+        form.form_title = question.text;
+      } else {
+        const newQuestion = await Question.create({
+          form_id: form._id,
+          qid: question.qid,
+          text: question.text,
+          type: question.type,
+          required: question.required,
+          validation: question.validation,
+        });
+        form.questions.push(newQuestion);
+      }
     });
-  return;
+
+  return form.save();
 };
 
-const checkIfQuestionsNotExist = async (formId, username) => {
-  const questions = await Question.find({
-    form_id: formId,
-    username: username,
-  });
-  if (questions.length > 0) {
-    return false;
+const checkIsFormExist = async (formId, username) => {
+  let form = await Form.findOne({ form_id: formId });
+  if (form) {
+    if (!form.assigned_to.includes(username)) {
+      form.assigned_to.push(username);
+      await form.save();
+    }
+  } else {
+    // If form not exist then create it
+    form = new Form({
+      form_id: formId,
+      assigned_to: [username],
+    });
+    await form.save();
   }
-  return true;
+  return form;
 };
+
+// const checkIsUserAssignedToForm = async (formId, username) => {
 
 module.exports = {
   saveQuestionsToDB,
-  checkIfQuestionsNotExist,
 };

@@ -1,6 +1,7 @@
 const TelegramBot = require("node-telegram-bot-api");
 
 const Question = require("../../models/Question");
+const Form = require("../../models/Form");
 const {
   pushSubmissionsToJotform,
 } = require("../utils/jotform/SubmissionHelper");
@@ -10,10 +11,89 @@ const bot = new TelegramBot(token, { polling: true });
 
 const sessions = [];
 
+// const sessions = [
+//   {
+//     username: "canbulgay",
+//     activeForm: null,
+//     forms: [
+//       {
+//         formId: "1",
+//         questions: [
+//           {
+//             qid: "123",
+//             text: "What is your name?",
+//             type: "control_textbox",
+//             required: "Yes",
+//             validation: "None",
+//           },
+//           {
+//             qid: "789",
+//             text: "What is your email?",
+//             type: "control_textbox",
+//             required: "Yes",
+//             validation: "Email",
+//           },
+//         ],
+//         submissions: [
+//           {
+//             qid: "123",
+//             answer: "test",
+//             type: "control_textbox",
+//             required: "Yes",
+//             text: "What is your name?",
+//             validation: "None",
+//           },
+//         ],
+//         questionIndex: 1,
+//         currentQuestion: null,
+//       },
+//       {
+//         formId: "2",
+//         questions: [
+//           {
+//             qid: "456",
+//             text: "What is your age?",
+//             type: "control_textbox",
+//             required: "Yes",
+//             validation: "None",
+//           },
+//           {
+//             qid: "789",
+//             text: "What is your email?",
+//             type: "control_textbox",
+//             required: "Yes",
+//             validation: "Email",
+//           },
+//         ],
+//         submissions: [
+//           {
+//             qid: "456",
+//             answer: "test",
+//             type: "control_textbox",
+//             required: "Yes",
+//             text: "What is your age?",
+//             validation: "None",
+//           },
+//         ],
+//         questionIndex: 1,
+//         currentQuestion: null,
+//       },
+//     ],
+//   },
+// ];
+
 /************************* Session Functions ******************************/
 const getUsersQuestions = async (username) => {
   return await Question.find({ username: username });
 };
+const getUserForms = async (username) => {
+  return await Form.find({ assigned_to: username });
+};
+
+const getFormQuestions = async (formId, username) => {
+  return await Question.find({ form_id: formId, assigned_to: username });
+};
+
 const getSession = (username) => {
   return sessions.find((session) => session.username === username);
 };
@@ -178,6 +258,7 @@ bot.onText(/\/start/, async (msg) => {
       });
     }
   }
+
   const questions = getSessionQuestions(username);
   const submissions = getSessionSubmissions(username);
 
