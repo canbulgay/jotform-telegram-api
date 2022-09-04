@@ -5,7 +5,7 @@ const {
   pushSubmissionsToJotform,
 } = require("../utils/jotform/SubmissionHelper");
 
-const token = "5432638025:AAEYYjO0L3WKLSQyDkhHdZ5WlO3pxry-mHU";
+const token = "5742132834:AAHrr1DhYdNDqyCcblaDNi8L3WSXibp1Dlg";
 const bot = new TelegramBot(token, { polling: true });
 
 const sessions = [];
@@ -61,6 +61,9 @@ const showNextQuestion = async (chatId, username, questionIndex) => {
       }
     );
     bot.onReplyToMessage(chatId, botQuestion.message_id, (message) => {
+      if (message.text.includes("/skip") || message.text.includes("/back")) {
+        return;
+      }
       if (!compareAnswerAndValidation(message.text, question.validation)) {
         bot.sendMessage(chatId, "Please enter a valid answer.");
       } else {
@@ -110,9 +113,8 @@ const compareQuestionIsRequired = (question) => {
 
 const sendStartMessage = (chatId) => {
   const welcomeMessage = "Welcome to the jotform bot.";
-  const description = "This bot is for filling the questions from Jotform.";
   const instructions = "Type or press /begin to start filling the questions.";
-  const startMessage = `${welcomeMessage}\n\n${description}\n\n${instructions}`;
+  const startMessage = `${welcomeMessage}\n\n${instructions}`;
   bot.sendDocument(
     chatId,
     "https://cdn.discordapp.com/attachments/1011189838109757450/1012362776091557968/podo.gif"
@@ -150,7 +152,7 @@ const askForSubmitOrStartOver = (chatId) => {
 };
 
 const informationMessage = (chatId) => {
-  const information = `You can skip questions by typing /skip \nYou can back to previous question by typing /back \n\n '*' means that question is required you can't skip it. \n Do not use the /skip and /back commands to replying the question.`;
+  const information = `You can skip questions by typing /skip \nYou can back to previous question by typing /back \n\n '*' means that question is required you can't skip it.`;
   bot.sendMessage(chatId, information);
 };
 
@@ -260,7 +262,6 @@ bot.onText(/\/skip/, async (msg) => {
 
   if (compareQuestionIsRequired(questions[0])) {
     bot.sendMessage(chatId, "This question is required. You can't skip it.");
-    showNextQuestion(chatId, username, session.properties.questionIndex);
   } else {
     session.properties.questionIndex++;
     const question = questions.shift();
@@ -274,8 +275,8 @@ bot.onText(/\/skip/, async (msg) => {
       username: username,
       validation: question.validation,
     });
-    showNextQuestion(chatId, username, session.properties.questionIndex);
   }
+  showNextQuestion(chatId, username, session.properties.questionIndex);
 });
 
 bot.onText(/\/back/, async (msg) => {
@@ -290,11 +291,10 @@ bot.onText(/\/back/, async (msg) => {
     const question = submissions.pop();
     questions.unshift(question);
     session.properties.currentQuestion = null;
-    showNextQuestion(chatId, username, session.properties.questionIndex);
   } else {
     bot.sendMessage(chatId, "You can't go back anymore.");
-    showNextQuestion(chatId, username, session.properties.questionIndex);
   }
+  showNextQuestion(chatId, username, session.properties.questionIndex);
 }),
   //handling bot errors
   bot.on("polling_error", (err) => {
