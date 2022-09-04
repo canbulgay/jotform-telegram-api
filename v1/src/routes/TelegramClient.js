@@ -2,11 +2,11 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  setUserTelegramCredentials,
+  setClientCredentials,
   sendMessage,
   sendCodeToPhoneNumber,
-  signInTheUser,
-  logOutTheUser,
+  signInClient,
+  removeClient,
   createSendTelegramButton,
 } = require("../controllers/TelegramClientController");
 
@@ -14,11 +14,11 @@ const telegram_client_create = require("../middlewares/telegram-client-create");
 const telegram_send_message = require("../middlewares/telegram-send-message");
 const telegram_client_logout = require("../middlewares/telegram-client-logout");
 
-router.post("/set-client-credentials", setUserTelegramCredentials);
+router.post("/set-client-credentials", setClientCredentials);
 router.post("/send-code", telegram_client_create, sendCodeToPhoneNumber);
-router.post("/sign-in", telegram_client_create, signInTheUser);
-router.post("/create-button", createSendTelegramButton);
+router.post("/sign-in", telegram_client_create, signInClient);
+router.post("/:userToken/create-button", createSendTelegramButton);
 router.post("/send-message", telegram_send_message, sendMessage);
-router.get("/logout", telegram_client_logout, logOutTheUser);
+router.post("/:userToken/remove-client", telegram_client_logout, removeClient);
 
 module.exports = router;

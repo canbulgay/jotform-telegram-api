@@ -3,7 +3,7 @@ const {
   sendCode,
   signIn,
   sendMessageToUser,
-  logOut,
+  logOutAndRemove,
 } = require("../services/TelegramClientService");
 
 const eventEmitter = require("../scripts/events/eventEmitter");
@@ -17,7 +17,7 @@ const TelegramButton = require("../models/TelegramButton");
  * @param {error} next
  * @returns
  */
-const setUserTelegramCredentials = async (req, res, next) => {
+const setClientCredentials = async (req, res, next) => {
   const { api_key, api_hash } = req.body;
 
   try {
@@ -76,7 +76,7 @@ const sendCodeToPhoneNumber = async (req, res, next) => {
  * @param {error} next
  * @return json
  */
-const signInTheUser = async (req, res, next) => {
+const signInClient = async (req, res, next) => {
   const { phone_code, phone_code_hash } = req.body;
   const client = req.client;
   const userToken = req.userToken;
@@ -130,7 +130,8 @@ const signInTheUser = async (req, res, next) => {
  * @return json
  */
 const createSendTelegramButton = async (req, res, next) => {
-  const { form_id, message, sheet_id, column_id, userToken } = req.body;
+  const userToken = req.params.userToken;
+  const { form_id, message, sheet_id, column_id } = req.body;
 
   try {
     const button = new TelegramButton({
@@ -193,13 +194,14 @@ const sendMessage = async (req, res, next) => {
  * @return json
  */
 
-const logOutTheUser = async (req, res, next) => {
+const removeClient = async (req, res, next) => {
   const client = req.client;
+  const userToken = req.userToken;
   try {
-    await logOut(client);
+    await logOutAndRemove(client, userToken);
 
     return res.status(200).json({
-      message: "You are logged out.",
+      message: "Client is removed.",
     });
   } catch (error) {
     next(error);
@@ -207,10 +209,10 @@ const logOutTheUser = async (req, res, next) => {
 };
 
 module.exports = {
-  setUserTelegramCredentials,
+  setClientCredentials,
   sendCodeToPhoneNumber,
   sendMessage,
-  signInTheUser,
-  logOutTheUser,
+  signInClient,
+  removeClient,
   createSendTelegramButton,
 };

@@ -13,7 +13,7 @@ module.exports = async (req, res, next) => {
   });
 
   if (!button) {
-    return res.status(400).json({
+    return res.status(404).json({
       message: "Button not found.",
     });
   }
@@ -22,7 +22,7 @@ module.exports = async (req, res, next) => {
     _id: button.client_id,
   });
   if (!telegramClient) {
-    return res.status(400).json({
+    return res.status(404).json({
       message: "Telegram client not found",
     });
   }

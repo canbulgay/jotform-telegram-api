@@ -11,24 +11,24 @@ const saveCredentials = async (api_key, api_hash) => {
 
   let clientModel = await ClientModel.findOne({ api_key: api_key });
 
-  if (!clientModel) {
-    const client = new TelegramClient(
-      new StringSession(""),
-      api_key,
-      api_hash,
-      {}
-    );
-    await client.connect();
+  if (clientModel) throw new Error("Client is exists");
 
-    clientModel = new ClientModel({
-      api_key: api_key,
-      api_hash: api_hash,
-      session_string: client.session.save(),
-    });
-    clientModel.save();
+  const client = new TelegramClient(
+    new StringSession(""),
+    api_key,
+    api_hash,
+    {}
+  );
+  await client.connect();
 
-    await client.session.setDC(2, "149.154.167.91", 80);
-  }
+  clientModel = new ClientModel({
+    api_key: api_key,
+    api_hash: api_hash,
+    session_string: client.session.save(),
+  });
+  clientModel.save();
+
+  await client.session.setDC(2, "149.154.167.91", 80);
 
   return clientModel._id;
 };
@@ -36,6 +36,8 @@ const saveCredentials = async (api_key, api_hash) => {
 // Send a code to user's phone.
 const sendCode = async (phone_number, client, userToken) => {
   const clientModel = await ClientModel.findOne({ _id: userToken });
+  if (!clientModel) throw new Error("Client not found");
+
   clientModel.phone_number = phone_number;
   clientModel.save();
 
@@ -53,6 +55,7 @@ const sendCode = async (phone_number, client, userToken) => {
 // Sign in user with phone code.
 const signIn = async (phone_code, phone_code_hash, client, userToken) => {
   const clientModel = await ClientModel.findOne({ _id: userToken });
+  if (!clientModel) throw new Error("Client not found");
 
   const result = await client.invoke(
     new Api.auth.SignIn({
@@ -62,27 +65,31 @@ const signIn = async (phone_code, phone_code_hash, client, userToken) => {
     })
   );
 
-  if (await client.isUserAuthorized()) {
-    clientModel.first_name = result.user.firstName;
-    clientModel.last_name = result.user.lastName;
-    clientModel.username = result.user.username;
-    clientModel.save();
+  if (!(await client.isUserAuthorized())) throw new Error("Sign in failed");
 
-    return clientModel;
-  }
-  return false;
+  clientModel.first_name = result.user.firstName;
+  clientModel.last_name = result.user.lastName;
+  clientModel.username = result.user.username;
+  clientModel.save();
+
+  return clientModel;
 };
 
 // Send message to user.
 const sendMessageToUser = async (username, message, bot_url, client) => {
   const messageWithBot = `${message}\n\n Jotform Bot => ${bot_url}`;
-  await client.sendMessage(username, { message: messageWithBot });
+  await client.sendMessage(username, {
+    message: messageWithBot,
+  });
   return;
 };
 
 // Log out the current user.
-const logOut = async (client) => {
+const logOutAndRemove = async (client, userToken) => {
+  const clientModel = await ClientModel.findOneAndRemove({ _id: userToken });
+  if (!clientModel) throw new Error("Client not found");
   await client.invoke(new Api.auth.LogOut({}));
+
   return;
 };
 
@@ -91,5 +98,5 @@ module.exports = {
   sendCode,
   signIn,
   sendMessageToUser,
-  logOut,
+  logOutAndRemove,
 };
