@@ -20,8 +20,8 @@ const prepareSubmissionsBeforePushing = (submissions) => {
   submissions.forEach((submission) => {
     switch (submission.type) {
       case "control_fullname":
-        const fullName = submission.answer ?? submission.answer.split(" ");
-        if (fullName.length == 2) {
+        const fullName = submission.answer.split(" ");
+        if (fullName.length > 1) {
           submissionParams.append(
             `submission[${submission.qid}_first]`,
             fullName[0]
@@ -45,6 +45,7 @@ const prepareSubmissionsBeforePushing = (submissions) => {
         );
         submissionParams.append(`submission[${submission.qid}_area]`, area);
         submissionParams.append(`submission[${submission.qid}_phone]`, phone);
+        break;
 
       default:
         submissionParams.append(
