@@ -4,9 +4,13 @@ const TelegramClientSchema = new Mongoose.Schema(
   {
     api_key: {
       type: Number,
+      required: true,
+      unique: true,
     },
     api_hash: {
       type: String,
+      required: true,
+      unique: true,
     },
     session_string: {
       type: String,

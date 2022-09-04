@@ -20,7 +20,7 @@ const TelegramButtonSchema = new Mongoose.Schema(
     },
     bot_url: {
       type: String,
-      default: "t.me/canbulgaybot",
+      default: "t.me/PodoFormBot",
     },
     message: {
       type: String,
