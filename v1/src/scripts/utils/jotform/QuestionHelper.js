@@ -28,7 +28,7 @@ const saveQuestionsToDB = async (questions, formId, username) => {
       if (question.type === "control_head") {
         form.form_title = question.text;
       } else {
-        const newQuestion = await Question.create({
+        Question.create({
           form_id: form._id,
           qid: question.qid,
           text: question.text,
@@ -36,10 +36,11 @@ const saveQuestionsToDB = async (questions, formId, username) => {
           required: question.required,
           validation: question.validation,
         });
-        form.questions.push(newQuestion);
       }
     });
 
+  const newQuestions = await Question.find({ form_id: form._id });
+  form.questions.push(...newQuestions);
   return form.save();
 };
 

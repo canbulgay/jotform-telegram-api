@@ -83,33 +83,37 @@ const sessions = [];
 // ];
 
 /************************* Session Functions ******************************/
-const getUsersQuestions = async (username) => {
-  return await Question.find({ username: username });
-};
-const getUserForms = async (username) => {
-  return await Form.find({ assigned_to: username });
-};
-
-const getFormQuestions = async (formId, username) => {
-  return await Question.find({ form_id: formId, assigned_to: username });
-};
 
 const getSession = (username) => {
   return sessions.find((session) => session.username === username);
 };
 
-const getSessionQuestions = (username) => {
-  const session = getSession(username);
-  if (session) {
-    return session.properties.questions;
-  }
+const getUserForms = async (username) => {
+  return await Form.find({ assigned_to: username }).populate("questions");
+};
+// Returns the users active form questions
+const getFormQuestions = async (formId, username) => {
+  const form = await Form.findOne({
+    formId: formId,
+    assigned_to: username,
+  });
+  return form.questions;
 };
 
-const getSessionSubmissions = (username) => {
+const getActiveForm = (activeFormId, username) => {
   const session = getSession(username);
-  if (session) {
-    return session.properties.submissions;
-  }
+  const form = session.forms.find((form) => form.formId === activeFormId);
+  return form;
+};
+
+const getActiveFormQuestions = (activeFormId, username) => {
+  const form = getActiveForm(activeFormId, username);
+  return form.questions;
+};
+
+const getActiveFormSubmissions = (activeFormId, username) => {
+  const form = getActiveForm(activeFormId, username);
+  return form.submissions;
 };
 
 /************************* Session Functions ******************************/
@@ -242,34 +246,31 @@ const informationMessage = (chatId) => {
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   let username = msg.chat.username;
-  if (!getSession(username)) {
-    const questions = await getUsersQuestions(username);
-    if (questions.length > 0) {
+  let session = getSession(username);
+  if (!session) {
+    const usersForms = await getUserForms(username);
+    if (usersForms.length > 0) {
+      let forms = [];
+      for (let index = 0; index < usersForms.length; index++) {
+        forms.push({
+          form_id: usersForms[index].form_id,
+          title: usersForms[index].form_title,
+          questions: await getFormQuestions(
+            usersForms[index].form_id,
+            username
+          ),
+          submissions: [],
+          currentQuestion: null,
+          questionIndex: 1,
+        });
+      }
+      console.log(forms);
       sessions.push({
         username: username,
-        formId: questions[0].form_id,
-        properties: {
-          questions: questions,
-          submissions: [],
-          submissionId: null,
-          questionIndex: 1,
-          currentQuestion: null,
-        },
+        activeFormId: null,
+        forms: forms,
       });
     }
-  }
-
-  const questions = getSessionQuestions(username);
-  const submissions = getSessionSubmissions(username);
-
-  if (questions?.length > 0 && !submissions?.length > 0) {
-    sendStartMessage(chatId);
-  } else if (questions?.length > 0 && submissions?.length > 0) {
-    sendContinueFormMessage(chatId);
-  } else if (!questions?.length > 0 && submissions?.length > 0) {
-    sendFormAlreadySubmittedMessage(chatId);
-  } else {
-    sendCantStartMessage(chatId);
   }
 });
 
@@ -382,7 +383,6 @@ bot.onText(/\/back/, async (msg) => {
     console.log(err);
     bot.stopPolling();
   });
-
 /************************* Bot Functions ******************************/
 
 module.exports = bot;
