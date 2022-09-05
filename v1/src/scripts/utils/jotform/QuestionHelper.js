@@ -45,7 +45,7 @@ const saveQuestionsToDB = async (questions, formId, username) => {
 };
 
 const checkIsFormExist = async (formId, username) => {
-  let form = await Form.findOne({ form_id: formId });
+  let form = await Form.findOne({ _id: formId });
   if (form) {
     if (!form.assigned_to.includes(username)) {
       form.assigned_to.push(username);
