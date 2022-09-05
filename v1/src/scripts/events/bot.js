@@ -89,14 +89,20 @@ const getSession = (username) => {
 };
 
 const getUserForms = async (username) => {
-  return await Form.find({ assigned_to: username }).populate("questions");
+  const form = await Form.find({ assigned_to: username }).populate({
+    path: "questions",
+    model: "Question",
+  });
+  console.log(form);
+  return form;
 };
 // Returns the users active form questions
 const getFormQuestions = async (formId, username) => {
   const form = await Form.findOne({
     formId: formId,
     assigned_to: username,
-  });
+  }).populate("questions");
+  console.log(form);
   return form.questions;
 };
 
@@ -242,10 +248,7 @@ const informationMessage = (chatId) => {
 
 /************************* Messages ******************************/
 
-/************************* Bot Functions ******************************/
-bot.onText(/\/start/, async (msg) => {
-  const chatId = msg.chat.id;
-  let username = msg.chat.username;
+const findSessionOrCreate = async (username) => {
   let session = getSession(username);
   if (!session) {
     const usersForms = await getUserForms(username);
@@ -253,12 +256,9 @@ bot.onText(/\/start/, async (msg) => {
       let forms = [];
       for (let index = 0; index < usersForms.length; index++) {
         forms.push({
-          form_id: usersForms[index].form_id,
-          title: usersForms[index].form_title,
-          questions: await getFormQuestions(
-            usersForms[index].form_id,
-            username
-          ),
+          form_id: usersForms[index]._id,
+          title: usersForms[index].title,
+          questions: await getFormQuestions(usersForms[index]._id, username),
           submissions: [],
           currentQuestion: null,
           questionIndex: 1,
@@ -271,7 +271,19 @@ bot.onText(/\/start/, async (msg) => {
         forms: forms,
       });
     }
+  } else {
+    return session;
   }
+  return getSession(username);
+};
+
+/************************* Bot Functions ******************************/
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id;
+  let username = msg.chat.username;
+
+  const session = await findSessionOrCreate(username);
+  console.log(session);
 });
 
 bot.onText(/\/begin/, (msg) => {

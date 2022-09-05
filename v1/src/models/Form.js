@@ -2,11 +2,11 @@ const Mongoose = require("mongoose");
 
 const FormSchema = new Mongoose.Schema(
   {
-    form_id: {
-      type: String,
+    _id: {
+      type: Mongoose.Schema.Types.String,
       required: true,
     },
-    form_title: {
+    title: {
       type: String,
     },
     assigned_to: [

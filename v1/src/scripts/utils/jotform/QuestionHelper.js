@@ -26,7 +26,7 @@ const saveQuestionsToDB = async (questions, formId, username) => {
     )
     .map(async (question) => {
       if (question.type === "control_head") {
-        form.form_title = question.text;
+        form.title = question.text;
       } else {
         Question.create({
           form_id: form._id,
@@ -54,7 +54,7 @@ const checkIsFormExist = async (formId, username) => {
   } else {
     // If form not exist then create it
     form = new Form({
-      form_id: formId,
+      _id: formId,
       assigned_to: [username],
     });
     await form.save();

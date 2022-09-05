@@ -3,9 +3,9 @@ const Mongoose = require("mongoose");
 const QuestionSchema = new Mongoose.Schema(
   {
     form_id: {
-      type: Mongoose.Schema.Types.ObjectId,
-      ref: "Form",
+      type: Mongoose.Schema.Types.String,
       required: true,
+      ref: "Form",
     },
     qid: {
       type: String,
