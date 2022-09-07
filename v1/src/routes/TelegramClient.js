@@ -8,6 +8,7 @@ const {
   signInClient,
   removeClient,
   createSendTelegramButton,
+  getClients,
 } = require("../controllers/TelegramClientController");
 
 const telegram_client_create = require("../middlewares/telegram-client-create");
@@ -20,5 +21,6 @@ router.post("/sign-in", telegram_client_create, signInClient);
 router.post("/:userToken/create-button", createSendTelegramButton);
 router.post("/send-message", telegram_send_message, sendMessage);
 router.post("/:userToken/remove-client", telegram_client_logout, removeClient);
+router.get("/get-clients", getClients);
 
 module.exports = router;

@@ -8,6 +8,7 @@ const {
 
 const eventEmitter = require("../scripts/events/eventEmitter");
 const TelegramButton = require("../models/TelegramButton");
+const TelegramClient = require("../models/TelegramClient");
 
 /**
  * Create a new telegram user via client credentials.
@@ -208,6 +209,31 @@ const removeClient = async (req, res, next) => {
   }
 };
 
+/**
+ * Get all active telegram clients.
+ * 
+ * @param {clients} res
+ * @param {error} next
+ * @return json
+ */
+const getClients = async (req, res, next) => {
+  try {
+    const clients = await TelegramClient.find({});
+    if(!clients){
+      return res.status(404).json({
+        error: "Clients not found.",
+      });
+    }
+    return res.status(200).json({
+      clients: clients,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+
 module.exports = {
   setClientCredentials,
   sendCodeToPhoneNumber,
@@ -215,4 +241,5 @@ module.exports = {
   signInClient,
   removeClient,
   createSendTelegramButton,
+  getClients
 };
