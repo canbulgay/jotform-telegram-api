@@ -1,6 +1,7 @@
 const Question = require("../../../models/Question");
 const Form = require("../../../models/Form");
 
+// TODO: Aynı form tekrar gönderildiğinde tekrar questionları db ye kaydetmemesi lazım.
 const saveQuestionsToDB = async (questions, formId, username) => {
   const form = await checkIsFormExist(formId, username);
 
@@ -40,7 +41,13 @@ const saveQuestionsToDB = async (questions, formId, username) => {
     });
 
   const newQuestions = await Question.find({ form_id: form._id });
-  form.questions.push(...newQuestions);
+  
+  if (form.questions.length === 0) {
+    form.questions.push(...newQuestions);
+  }else if (form.questions.length !== newQuestions.length) {
+    form.questions = [];
+    form.questions.push(...newQuestions);
+  }
   return form.save();
 };
 
@@ -52,7 +59,6 @@ const checkIsFormExist = async (formId, username) => {
       await form.save();
     }
   } else {
-    // If form not exist then create it
     form = new Form({
       _id: formId,
       assigned_to: [username],
@@ -61,8 +67,6 @@ const checkIsFormExist = async (formId, username) => {
   }
   return form;
 };
-
-// const checkIsUserAssignedToForm = async (formId, username) => {
 
 module.exports = {
   saveQuestionsToDB,

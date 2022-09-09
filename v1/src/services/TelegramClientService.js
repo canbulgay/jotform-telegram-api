@@ -77,7 +77,7 @@ const signIn = async (phone_code, phone_code_hash, client, userToken) => {
 
 // Send message to user.
 const sendMessageToUser = async (username, message, bot_url, client) => {
-  const messageWithBot = `${message}\n\n Jotform Bot => ${bot_url}`;
+  const messageWithBot = `${message}\n\n Jotform Bot ${bot_url}`;
   await client.sendMessage(username, {
     message: messageWithBot,
   });
