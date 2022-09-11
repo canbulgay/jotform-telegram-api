@@ -125,6 +125,12 @@ Example: `{Base URL}/sign-in`
 
     	POST				/:userId/create-button
 
+**_Query Parameters_**
+
+| Key         | Type   | Value                      |
+| ----------- | ------ | -------------------------- |
+| clientToken | string | 630f4c7451b237b554a9sd8604 |
+
 **_Body Form-Data Parameters_**
 
 | Key       | Type   | Value                                              |
@@ -134,7 +140,7 @@ Example: `{Base URL}/sign-in`
 | sheet_id  | string | 222092123377047                                    |
 | message   | string | You are expected to fill out the "Internship Form. |
 
-Example: `{Base URL}/:userId/create-button`
+Example: `{Base URL}/:clientToken/create-button`
 
 ```json
 {
@@ -144,7 +150,13 @@ Example: `{Base URL}/:userId/create-button`
 
 ### Send Message
 
-    	POST				/:userId/send-message
+    	POST				/:clientToken/send-message
+
+**_Query Parameters_**
+
+| Key         | Type   | Value                      |
+| ----------- | ------ | -------------------------- |
+| clientToken | string | 630f4c7451b237b554a9sd8604 |
 
 **_Body Form-Data Parameters_**
 
@@ -154,7 +166,7 @@ Example: `{Base URL}/:userId/create-button`
 | column_id | string | 6               |
 | sheet_id  | string | 222092123377047 |
 
-Example: `{Base URL}/:userId/send-message`
+Example: `{Base URL}/:clientToken/send-message`
 
 ```json
 {
@@ -163,5 +175,48 @@ Example: `{Base URL}/:userId/send-message`
     "username": "canbulgay",
     "message": "You are expected to fill out the 'Internship Form'"
   }
+}
+```
+
+### Remove Client
+
+    	POST				/:clientToken/remove-client
+
+**_Query Parameters_**
+
+| Key         | Type   | Value                      |
+| ----------- | ------ | -------------------------- |
+| clientToken | string | 630f4c7451b237b554a9sd8604 |
+
+Example: `{Base URL}/:clientToken/remove-client`
+
+```json
+{
+  "message": "Client is removed."
+}
+```
+
+### Get Clients
+
+    	GET				/get-clients
+
+Example: `{Base URL}/get-clients`
+
+```json
+{
+  "clients": [
+    {
+      "_id": "630f4c7451b237b554a9sd8604"
+      "api_key": 1496132319
+      "api_hash": "81751fa59abbadsad984e799b38d408973960"
+      "session_string": "1BAAOMTQ5LjE1NC4xNjcuOTasdaEAUF6VCYeBhdudsadaJBZoYjOCP0FpiS+mlRywmysBPyVGk7itzw…"
+      "createdAt": "2022-08-31T11:56:36.088+00:00"
+      "updatedAt": "2022-09-03T12:39:36.341+00:00"
+      "phone_number": "905312665079"
+      "first_name": "Can"
+      "last_name": "Bulgay"
+      "username": "canbulgay"
+    },
+  ]
 }
 ```
