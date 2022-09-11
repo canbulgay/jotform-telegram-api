@@ -1,11 +1,10 @@
 const Question = require("../../../models/Question");
 const Form = require("../../../models/Form");
 
-// TODO: Aynı form tekrar gönderildiğinde tekrar questionları db ye kaydetmemesi lazım.
 const saveQuestionsToDB = async (questions, formId, username) => {
   const form = await checkIsFormExist(formId, username);
 
-  Object.keys(questions)
+  const incomingQuestions = Object.keys(questions)
     .reduce((acc, key) => {
       const temp = {
         qid: questions[key].qid,
@@ -24,12 +23,25 @@ const saveQuestionsToDB = async (questions, formId, username) => {
         question.type !== "control_divider" &&
         question.type !== "control_signature" &&
         question.type !== "control_button"
-    )
-    .map(async (question) => {
-      if (question.type === "control_head") {
-        form.title = question.text;
-      } else {
-        Question.create({
+    );
+
+  const savedQuestions = await Question.find({ form_id: form._id });
+  if (savedQuestions.length > 0) {
+
+    const isSame = incomingQuestions.every((question) => {
+      return savedQuestions.some((q) => {
+        return q.qid === question.qid;
+      });
+    });
+    if (!isSame) {
+      await Question.deleteMany({ form_id: form._id });
+
+      incomingQuestions.forEach((question) => {
+        if(question.type === "control_head"){
+          form.title = question.text;
+          return;
+        }
+        let newQuestion = new Question({
           form_id: form._id,
           qid: question.qid,
           text: question.text,
@@ -37,17 +49,41 @@ const saveQuestionsToDB = async (questions, formId, username) => {
           required: question.required,
           validation: question.validation,
         });
+        newQuestion.save();
+        form.questions.push(newQuestion);
+      });
+    }else {
+      incomingQuestions.forEach((question) => {
+        Question.findOneAndUpdate(
+          { qid: question.qid },
+          {
+            text: question.text,
+            type: question.type,
+            required: question.required,
+            validation: question.validation,
+          }
+        );
+      });
+    }
+  }else {
+    incomingQuestions.forEach((question) => {
+      if(question.type === "control_head"){
+        form.title = question.text;
+        return;
       }
+      let newQuestion = new Question({
+        form_id: form._id,
+        qid: question.qid,
+        text: question.text,
+        type: question.type,
+        required: question.required,
+        validation: question.validation,
+      });
+      newQuestion.save();
+      form.questions.push(newQuestion);
     });
-
-  const newQuestions = await Question.find({ form_id: form._id });
-  
-  if (form.questions.length === 0) {
-    form.questions.push(...newQuestions);
-  }else if (form.questions.length !== newQuestions.length) {
-    form.questions = [];
-    form.questions.push(...newQuestions);
   }
+
   return form.save();
 };
 
