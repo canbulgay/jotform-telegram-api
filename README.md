@@ -123,7 +123,7 @@ Example: `{Base URL}/sign-in`
 
 ### Create Send Telegram Button
 
-    	POST				/:userId/create-button
+    	POST				/:clientToken/create-button
 
 **_Query Parameters_**
 
@@ -150,13 +150,7 @@ Example: `{Base URL}/:clientToken/create-button`
 
 ### Send Message
 
-    	POST				/:clientToken/send-message
-
-**_Query Parameters_**
-
-| Key         | Type   | Value                      |
-| ----------- | ------ | -------------------------- |
-| clientToken | string | 630f4c7451b237b554a9sd8604 |
+    	POST				/send-message
 
 **_Body Form-Data Parameters_**
 
@@ -166,7 +160,7 @@ Example: `{Base URL}/:clientToken/create-button`
 | column_id | string | 6               |
 | sheet_id  | string | 222092123377047 |
 
-Example: `{Base URL}/:clientToken/send-message`
+Example: `{Base URL}/send-message`
 
 ```json
 {
