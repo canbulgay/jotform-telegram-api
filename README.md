@@ -214,3 +214,6 @@ Example: `{Base URL}/get-clients`
   ]
 }
 ```
+
+```sh
+brew install python
